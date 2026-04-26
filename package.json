@@ -1,0 +1,19 @@
+{
+  "name": "pizzaerp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "desktop": "pnpm --filter @pizzaerp/desktop dev",
+    "api": "pnpm --filter @pizzaerp/api dev",
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --recursive build",
+    "typecheck": "pnpm --recursive typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

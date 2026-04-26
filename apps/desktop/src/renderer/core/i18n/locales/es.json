@@ -1,0 +1,87 @@
+{
+  "commandPalette": {
+    "placeholder": "Buscar comando...",
+    "empty": "Sin resultados."
+  },
+  "commands": {
+    "workbench": {
+      "toggleSidebar":  "Alternar barra lateral",
+      "showCommands":   "Paleta de comandos"
+    },
+    "settings": {
+      "open":           "Configuración",
+      "goGeneral":      "Configuración: General",
+      "goAccount":      "Configuración: Cuenta",
+      "goKeybindings":  "Configuración: Atajos de teclado"
+    }
+  },
+  "app": {
+    "quit": "Salir"
+  },
+  "menu": {
+    "view": "Ver"
+  },
+  "prompt": {
+    "title": "Ingresá los datos"
+  },
+  "confirm": {
+    "title": "¿Estás seguro?",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
+  },
+  "error": {
+    "title": "Algo salió mal",
+    "description": "Ocurrió un error inesperado en la aplicación.",
+    "retry": "Reintentar"
+  },
+  "sidebar": {
+    "settings": "Configuración"
+  },
+  "settings": {
+    "title": "Configuración",
+    "sections": {
+      "general": "General",
+      "account": "Cuenta",
+      "keybindings": "Atajos"
+    },
+    "general": {
+      "appearance": {
+        "title": "Apariencia",
+        "description": "Personaliza el aspecto visual de la aplicación."
+      },
+      "theme": {
+        "label": "Tema",
+        "description": "Claro, oscuro o según el sistema.",
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      },
+      "menubar": {
+        "label": "Barra de menú",
+        "description": "Muestra u oculta el menú en el titlebar."
+      },
+      "language": {
+        "label": "Idioma",
+        "description": "Idioma de la interfaz.",
+        "es": "Español",
+        "en": "English"
+      }
+    },
+    "account": {
+      "title": "Cuenta",
+      "description": "Información de tu sesión activa.",
+      "roles": "Roles",
+      "logout": "Cerrar sesión"
+    },
+    "keybindings": {
+      "title": "Atajos de teclado",
+      "description": "Personalizá los atajos de teclado de la aplicación.",
+      "search": "Buscar comando...",
+      "pressKey": "Presioná una tecla...",
+      "clickToEdit": "Clic para editar",
+      "add": "Agregar atajo",
+      "reset": "Restablecer",
+      "resetAll": "Restablecer todo"
+    }
+  }
+}

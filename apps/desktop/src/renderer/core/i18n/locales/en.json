@@ -1,0 +1,87 @@
+{
+  "commandPalette": {
+    "placeholder": "Search commands...",
+    "empty": "No results found."
+  },
+  "commands": {
+    "workbench": {
+      "toggleSidebar":  "Toggle Sidebar",
+      "showCommands":   "Command Palette"
+    },
+    "settings": {
+      "open":           "Settings",
+      "goGeneral":      "Settings: General",
+      "goAccount":      "Settings: Account",
+      "goKeybindings":  "Settings: Keyboard Shortcuts"
+    }
+  },
+  "app": {
+    "quit": "Quit"
+  },
+  "menu": {
+    "view": "View"
+  },
+  "prompt": {
+    "title": "Enter details"
+  },
+  "confirm": {
+    "title": "Are you sure?",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred in the application.",
+    "retry": "Try again"
+  },
+  "sidebar": {
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "general": "General",
+      "account": "Account",
+      "keybindings": "Shortcuts"
+    },
+    "general": {
+      "appearance": {
+        "title": "Appearance",
+        "description": "Customize the visual look of the application."
+      },
+      "theme": {
+        "label": "Theme",
+        "description": "Light, dark or follow the system.",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "menubar": {
+        "label": "Menu bar",
+        "description": "Show or hide the menu in the titlebar."
+      },
+      "language": {
+        "label": "Language",
+        "description": "Interface language.",
+        "es": "Español",
+        "en": "English"
+      }
+    },
+    "account": {
+      "title": "Account",
+      "description": "Your active session information.",
+      "roles": "Roles",
+      "logout": "Sign out"
+    },
+    "keybindings": {
+      "title": "Keyboard shortcuts",
+      "description": "Customize the application's keyboard shortcuts.",
+      "search": "Search commands...",
+      "pressKey": "Press a key...",
+      "clickToEdit": "Click to edit",
+      "add": "Add shortcut",
+      "reset": "Reset",
+      "resetAll": "Reset all"
+    }
+  }
+}
