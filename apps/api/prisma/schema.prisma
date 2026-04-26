@@ -7,7 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Global tables — tenant isolation via PostgreSQL schemas (STA-11)
+// ─── Global schema (public) ───────────────────────────────────────────────────
+// Tenant-specific tables (orders, menu, shifts...) live in dynamic schemas
+// created by TenantSchemaService. Managed via raw SQL migrations, not Prisma.
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -27,13 +30,15 @@ model Branch {
 
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
+  email        String
   passwordHash String
   role         Role
   tenantId     String
   branchId     String?
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
   createdAt    DateTime @default(now())
+
+  @@unique([email, tenantId])
 }
 
 enum Role {
