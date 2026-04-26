@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Global tables — tenant isolation via PostgreSQL schemas (STA-11)
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  schema    String   @unique
+  createdAt DateTime @default(now())
+  branches  Branch[]
+  users     User[]
+}
+
+model Branch {
+  id       String @id @default(cuid())
+  name     String
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  tenantId     String
+  branchId     String?
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  CAJERO
+  HORNERO
+}

@@ -24,14 +24,7 @@
     "email": "subelzaolivitocabezas@gmail.com"
   },
   "license": "MIT",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild",
-      "electron-winstaller"
-    ]
-  },
-  "devDependencies": {
+"devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
     "@electron-forge/maker-rpm": "^7.11.1",
