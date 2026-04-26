@@ -11,14 +11,44 @@ datasource db {
 // Tenant-specific tables (orders, menu, shifts...) live in dynamic schemas
 // created by TenantSchemaService. Managed via raw SQL migrations, not Prisma.
 
+model Plan {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  maxBranches   Int?                    // null = ilimitado
+  maxUsers      Int?                    // null = ilimitado
+  features      Json     @default("[]") // ["inventory", "reports", ...]
+  priceMonthly  Decimal? @db.Decimal(10, 2) // null = licencia perpetua
+  createdAt     DateTime @default(now())
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  tenantId         String             @unique
+  planId           String
+  status           SubscriptionStatus @default(TRIAL)
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?          // null = licencia perpetua
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  plan   Plan   @relation(fields: [planId], references: [id])
+}
+
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  schema    String   @unique
-  createdAt DateTime @default(now())
-  branches  Branch[]
-  users     User[]
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  schema       String       @unique
+  status       TenantStatus @default(ONBOARDING)
+  billingEmail String?
+  createdAt    DateTime     @default(now())
+
+  subscription Subscription?
+  branches     Branch[]
+  users        User[]
 }
 
 model Branch {
@@ -35,8 +65,9 @@ model User {
   role         Role
   tenantId     String
   branchId     String?
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
   createdAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([email, tenantId])
 }
@@ -45,4 +76,18 @@ enum Role {
   ADMIN
   CAJERO
   HORNERO
+}
+
+enum TenantStatus {
+  ONBOARDING
+  ACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELED
 }
