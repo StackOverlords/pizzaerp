@@ -1,9 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
-import { corsPlugin } from './plugins/cors'
-import { swaggerPlugin } from './plugins/swagger'
-import { errorHandler } from './errors/error-handler'
-import { registerRoutes } from './routes/index'
+import { corsPlugin } from './shared/plugins/cors'
+import { swaggerPlugin } from './shared/plugins/swagger'
+import { errorHandler } from './shared/errors/error-handler'
+import { registerRoutes } from './presentation/routes/index'
 
 export async function createServer(): Promise<FastifyInstance> {
   const server = Fastify({
