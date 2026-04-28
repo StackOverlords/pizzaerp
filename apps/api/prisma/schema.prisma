@@ -60,7 +60,7 @@ model Branch {
 
 model User {
   id           String   @id @default(cuid())
-  email        String
+  username     String
   passwordHash String
   role         Role
   tenantId     String
@@ -69,7 +69,7 @@ model User {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
-  @@unique([email, tenantId])
+  @@unique([username, tenantId])
 }
 
 enum Role {

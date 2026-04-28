@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import { corsPlugin } from './shared/plugins/cors'
 import { swaggerPlugin } from './shared/plugins/swagger'
+import { jwtFastifyPlugin } from './presentation/plugins/jwt.plugin'
 import { errorHandler } from './shared/errors/error-handler'
 import { registerRoutes } from './presentation/routes/index'
 
@@ -17,6 +18,7 @@ export async function createServer(): Promise<FastifyInstance> {
   await server.register(corsPlugin)
   await server.register(swaggerPlugin)
   await server.register(sensible)
+  await server.register(jwtFastifyPlugin)
 
   server.setErrorHandler(errorHandler)
 

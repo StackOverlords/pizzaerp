@@ -6,8 +6,8 @@ import type { UserRole } from '../../../domain/entities/user'
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly db: PrismaClient) {}
 
-  async findByEmail(email: string, tenantId: string): Promise<User | null> {
-    const user = await this.db.user.findFirst({ where: { email, tenantId } })
+  async findByUsername(username: string, tenantId: string): Promise<User | null> {
+    const user = await this.db.user.findFirst({ where: { username, tenantId } })
     return user ? this.toEntity(user) : null
   }
 
@@ -23,7 +23,7 @@ export class PrismaUserRepository implements IUserRepository {
 
   private toEntity(raw: {
     id: string
-    email: string
+    username: string
     passwordHash: string
     role: string
     tenantId: string
@@ -32,7 +32,7 @@ export class PrismaUserRepository implements IUserRepository {
   }): User {
     return {
       id: raw.id,
-      email: raw.email,
+      username: raw.username,
       passwordHash: raw.passwordHash,
       role: raw.role as UserRole,
       tenantId: raw.tenantId,

@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
+import fp from 'fastify-plugin'
 
-export async function swaggerPlugin(fastify: FastifyInstance) {
+export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyInstance) {
   await fastify.register(swagger, {
     openapi: {
       openapi: '3.0.0',
@@ -33,4 +34,4 @@ export async function swaggerPlugin(fastify: FastifyInstance) {
     routePrefix: '/docs',
     uiConfig: { docExpansion: 'list' },
   })
-}
+})
