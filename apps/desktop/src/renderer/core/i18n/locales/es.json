@@ -6,13 +6,25 @@
   "commands": {
     "workbench": {
       "toggleSidebar":  "Alternar barra lateral",
-      "showCommands":   "Paleta de comandos"
+      "showCommands":   "Paleta de comandos",
+      "toggleMenubar":  "Alternar barra de menú",
+      "toggleTabbar":   "Alternar barra de pestañas"
     },
     "settings": {
       "open":           "Configuración",
       "goGeneral":      "Configuración: General",
+      "goAppearance":   "Configuración: Apariencia",
+      "goWorkbench":    "Configuración: Workbench",
       "goAccount":      "Configuración: Cuenta",
       "goKeybindings":  "Configuración: Atajos de teclado"
+    },
+    "tabs": {
+      "closeActive":    "Cerrar pestaña",
+      "nextTab":        "Pestaña siguiente",
+      "prevTab":        "Pestaña anterior",
+      "closeAll":       "Cerrar todas las pestañas",
+      "pinActive":      "Fijar pestaña",
+      "unpinActive":    "Desfijar pestaña"
     }
   },
   "app": {
@@ -34,6 +46,16 @@
     "description": "Ocurrió un error inesperado en la aplicación.",
     "retry": "Reintentar"
   },
+  "tabs": {
+    "noTabsOpen": "Sin pestañas abiertas",
+    "closeTab": "Cerrar pestaña",
+    "pinTab": "Fijar pestaña",
+    "unpinTab": "Desfijar pestaña",
+    "closeOthers": "Cerrar las demás",
+    "closeAll": "Cerrar todas",
+    "closeToRight": "Cerrar a la derecha",
+    "openTabs": "Pestañas abiertas ({{count}})"
+  },
   "sidebar": {
     "settings": "Configuración"
   },
@@ -41,6 +63,8 @@
     "title": "Configuración",
     "sections": {
       "general": "General",
+      "appearance": "Apariencia",
+      "workbench": "Workbench",
       "account": "Cuenta",
       "keybindings": "Atajos"
     },
@@ -60,11 +84,47 @@
         "label": "Barra de menú",
         "description": "Muestra u oculta el menú en el titlebar."
       },
+      "tabbar": {
+        "label": "Barra de pestañas",
+        "description": "Muestra u oculta la barra de pestañas en el titlebar."
+      },
       "language": {
         "label": "Idioma",
         "description": "Idioma de la interfaz.",
         "es": "Español",
         "en": "English"
+      }
+    },
+    "workbench": {
+      "title": "Workbench",
+      "description": "Configurá el comportamiento de las pestañas y el espacio de trabajo.",
+      "restoreTabs": {
+        "label": "Restaurar pestañas al iniciar",
+        "description": "Reabre las pestañas de la sesión anterior cuando inicia la aplicación."
+      },
+      "closeLastTab": {
+        "label": "Permitir cerrar la última pestaña",
+        "description": "Si está desactivado, la última pestaña no puede cerrarse."
+      },
+      "maxTabs": {
+        "label": "Máximo de pestañas abiertas",
+        "description": "Las pestañas más antiguas se cierran automáticamente al alcanzar el límite."
+      }
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "description": "Ajustá el tamaño de fuentes e íconos en la interfaz.",
+      "fontSize": {
+        "label": "Tamaño de fuente",
+        "description": "Controla el tamaño base del texto en toda la aplicación."
+      },
+      "sidebarIconSize": {
+        "label": "Íconos del sidebar",
+        "description": "Tamaño de los íconos en la barra lateral de navegación."
+      },
+      "tabbarIconSize": {
+        "label": "Íconos del tab bar",
+        "description": "Tamaño de los íconos en la barra de pestañas abiertas."
       }
     },
     "account": {

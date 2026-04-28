@@ -3,9 +3,12 @@ import { keyNormalizer } from './key-normalizer'
 import { KEYBINDING_SOURCE } from './types'
 
 const BUILTIN_KEYBINDINGS = [
-  { key: 'ctrl+,',       commandId: 'settings.action.open' },
-  { key: 'ctrl+shift+p', commandId: 'workbench.action.showCommands' },
-  { key: 'ctrl+b',       commandId: 'workbench.action.toggleSidebar' },
+  { key: 'ctrl+,',         commandId: 'settings.action.open' },
+  { key: 'ctrl+shift+p',   commandId: 'workbench.action.showCommands' },
+  { key: 'ctrl+b',         commandId: 'workbench.action.toggleSidebar' },
+  { key: 'ctrl+w',         commandId: 'tabs.action.closeActive' },
+  { key: 'ctrl+tab',       commandId: 'tabs.action.nextTab' },
+  { key: 'ctrl+shift+tab', commandId: 'tabs.action.prevTab' },
 ] as const
 
 export function registerDefaultKeybindings(): void {
