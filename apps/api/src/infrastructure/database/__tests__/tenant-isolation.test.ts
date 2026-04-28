@@ -52,9 +52,9 @@ describe('Tenant schema isolation (CA-05)', () => {
     `)
 
     // Query from tenant B's schema — should return 0 rows
-    const rows = await prisma.$queryRawUnsafe<unknown[]>(
+    const rows = (await prisma.$queryRawUnsafe(
       `SELECT * FROM "${TENANT_B.schema}".shifts`,
-    )
+    )) as unknown[]
     expect(rows).toHaveLength(0)
   })
 

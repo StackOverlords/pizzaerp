@@ -4,8 +4,119 @@ import { useCommandPaletteStore } from './command-palette-store'
 import { notify } from '@/core/notify'
 import { confirm } from '@/core/confirm'
 import { prompt } from '@/core/prompt'
+import { useTabStore, useTabsSettingsStore } from '@/core/tabs/store/tab-store'
+import { routerRef } from '@/core/routing/router-ref'
+import { storage } from '@/lib/storage/adapter'
+import { StorageKeys } from '@/lib/storage/keys'
+import { eventBus } from '@/core/events/event-bus'
 
 export function registerDefaultCommands() {
+  // Tab navigation commands
+  commandRegistry.register(
+    'tabs.action.closeActive',
+    () => i18next.t('commands.tabs.closeActive'),
+    () => {
+      const store = useTabStore.getState()
+      const { activeTabId } = store
+      if (!activeTabId) return
+      const tab = store.tabs.find((t) => t.id === activeTabId)
+      if (!tab || !tab.isClosable || tab.isPinned) return
+      const { allowCloseLastTab } = useTabsSettingsStore.getState()
+      if (store.tabs.length === 1 && !allowCloseLastTab) return
+      store.removeTab(activeTabId)
+      const { activeTabId: nextId, tabs: nextTabs } = useTabStore.getState()
+      if (nextId) {
+        const next = nextTabs.find((t) => t.id === nextId)
+        if (next) routerRef.navigate(next.path)
+      } else {
+        routerRef.navigate('/')
+      }
+    }
+  )
+
+  commandRegistry.register(
+    'tabs.action.nextTab',
+    () => i18next.t('commands.tabs.nextTab'),
+    () => {
+      const { tabs, activeTabId } = useTabStore.getState()
+      if (tabs.length <= 1) return
+      const idx = tabs.findIndex((t) => t.id === activeTabId)
+      const next = tabs[(idx + 1) % tabs.length]
+      useTabStore.getState().setActiveTab(next.id)
+      routerRef.navigate(next.path)
+    }
+  )
+
+  commandRegistry.register(
+    'tabs.action.prevTab',
+    () => i18next.t('commands.tabs.prevTab'),
+    () => {
+      const { tabs, activeTabId } = useTabStore.getState()
+      if (tabs.length <= 1) return
+      const idx = tabs.findIndex((t) => t.id === activeTabId)
+      const prev = tabs[(idx - 1 + tabs.length) % tabs.length]
+      useTabStore.getState().setActiveTab(prev.id)
+      routerRef.navigate(prev.path)
+    }
+  )
+
+  commandRegistry.register(
+    'tabs.action.closeAll',
+    () => i18next.t('commands.tabs.closeAll'),
+    () => {
+      useTabStore.getState().closeAllTabs()
+      const { activeTabId, tabs } = useTabStore.getState()
+      if (activeTabId) {
+        const active = tabs.find((t) => t.id === activeTabId)
+        if (active) routerRef.navigate(active.path)
+      } else {
+        routerRef.navigate('/')
+      }
+    }
+  )
+
+  commandRegistry.register(
+    'tabs.action.pinActive',
+    () => i18next.t('commands.tabs.pinActive'),
+    () => {
+      const { activeTabId } = useTabStore.getState()
+      if (!activeTabId) return
+      useTabStore.getState().pinTab(activeTabId)
+    }
+  )
+
+  commandRegistry.register(
+    'tabs.action.unpinActive',
+    () => i18next.t('commands.tabs.unpinActive'),
+    () => {
+      const { activeTabId } = useTabStore.getState()
+      if (!activeTabId) return
+      useTabStore.getState().unpinTab(activeTabId)
+    }
+  )
+
+  commandRegistry.register(
+    'workbench.action.toggleMenubar',
+    () => i18next.t('commands.workbench.toggleMenubar'),
+    async () => {
+      const current = await storage.get<boolean>(StorageKeys.titlebar.showMenubar)
+      const next = current === false
+      await storage.set(StorageKeys.titlebar.showMenubar, next)
+      eventBus.emit('titlebar.menubar.toggled', { visible: next })
+    }
+  )
+
+  commandRegistry.register(
+    'workbench.action.toggleTabbar',
+    () => i18next.t('commands.workbench.toggleTabbar'),
+    async () => {
+      const current = await storage.get<boolean>(StorageKeys.titlebar.showTabbar)
+      const next = current === false
+      await storage.set(StorageKeys.titlebar.showTabbar, next)
+      eventBus.emit('titlebar.tabbar.toggled', { visible: next })
+    }
+  )
+
   commandRegistry.register(
     'workbench.action.toggleSidebar',
     () => i18next.t('commands.workbench.toggleSidebar'),

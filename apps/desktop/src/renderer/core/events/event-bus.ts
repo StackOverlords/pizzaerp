@@ -44,6 +44,7 @@ export type AppEvents = {
 
   // Titlebar (para sincronizar estado del menú entre ventanas)
   'titlebar.menubar.toggled':  { visible: boolean }
+  'titlebar.tabbar.toggled':   { visible: boolean }
 
   // Órdenes (placeholder — expandir cuando se cree el módulo)
   'order.created':             { orderId: string }

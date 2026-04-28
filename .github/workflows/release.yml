@@ -26,9 +26,56 @@ jobs:
       - name: Build
         run: pnpm --filter api build
 
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy/prisma
+          cp -r apps/api/dist deploy/
+          cp apps/api/package.json deploy/
+          cp apps/api/prisma/schema.prisma deploy/prisma/
+          cp -r apps/api/prisma/migrations deploy/prisma/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-dist
-          path: apps/api/dist/
-          retention-days: 30
+          path: deploy/
+          retention-days: 7
+
+  deploy-api:
+    name: Deploy API
+    needs: build-api
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-dist
+          path: deploy/
+
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/*"
+          target: "/home/olivio/pizzaerp-api"
+          strip_components: 1
+
+      - name: Install, migrate & restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/olivio/pizzaerp-api
+            npm install
+            npx prisma generate
+            npx prisma migrate deploy
+            pm2 describe pizzaerp-api > /dev/null 2>&1 \
+              && pm2 restart pizzaerp-api \
+              || pm2 start dist/index.js --name pizzaerp-api
+            pm2 save

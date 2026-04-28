@@ -1,0 +1,6 @@
+export { useTabStore, useTabsSettingsStore, MAX_OPEN_TABS_OPTIONS } from './store/tab-store'
+export { useTabContext, TabContext } from './hooks/use-tab-context'
+export type { TabInstance } from './types'
+export { default as TabBar } from './components/TabBar'
+export { default as TabContent } from './components/TabContent'
+export { openRoute } from './open-route'
