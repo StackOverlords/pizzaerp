@@ -78,7 +78,7 @@ export function PromptDialog() {
     if (open) {
       reset(Object.fromEntries(fields.map((f) => [f.id, f.defaultValue ?? ''])))
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open])
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) _settle(null) }}>

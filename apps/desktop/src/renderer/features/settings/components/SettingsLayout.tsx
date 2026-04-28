@@ -1,7 +1,6 @@
 import { UserCircle, SlidersHorizontal, Keyboard, Paintbrush, Layout } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { useSettingsStore } from '../store'
 import { SETTINGS_SECTION, type SettingsSection } from '../schemas'

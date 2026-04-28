@@ -3,7 +3,6 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { RouteRegistry } from '@/core/routing/route-registry'
 import { electronTabStorage } from '@/lib/storage/tab-storage'
 import { StorageKeys } from '@/lib/storage/keys'
-import { TABS_CONFIG } from '../config'
 import type { TabInstance } from '../types'
 
 export const MAX_OPEN_TABS_OPTIONS = [5, 10, 15, 20, 30] as const

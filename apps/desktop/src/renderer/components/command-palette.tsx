@@ -42,7 +42,6 @@ export function CommandPalette() {
   const groups = useMemo(
     () => groupCommands(commandRegistry.getPaletteCommands()),
     // re-scan registry cada vez que la paleta abre
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isOpen]
   )
 

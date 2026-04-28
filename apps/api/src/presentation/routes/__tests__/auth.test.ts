@@ -130,7 +130,7 @@ describe('POST /api/v1/auth/login', () => {
 
   it('CA-05 — refresh_token expira en 7 días', async () => {
     const { refresh_token } = await login()
-    const payload = server.jwt.verify<JwtPayload & { iat: number }>(refresh_token)
+    const payload = server.jwt.verify<JwtPayload & { iat: number; exp: number }>(refresh_token)
 
     expect(payload.exp! - payload.iat).toBe(7 * 24 * 60 * 60)
     expect(payload.type).toBe('refresh')
