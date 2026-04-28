@@ -280,7 +280,7 @@ describe('authorize hook (CA-04)', () => {
     expect(res.statusCode).toBe(200)
   })
 
-  it('devuelve 403 para rol incorrecto (ADMIN en ruta CAJERO)', async () => {
+  it('ADMIN accede a rutas de CAJERO (acceso universal)', async () => {
     const { access_token } = await login()
 
     const res = await server.inject({
@@ -289,7 +289,7 @@ describe('authorize hook (CA-04)', () => {
       headers: { Authorization: `Bearer ${access_token}` },
     })
 
-    expect(res.statusCode).toBe(403)
+    expect(res.statusCode).toBe(200)
   })
 
   it('devuelve 403 para token firmado con rol no autorizado', async () => {
