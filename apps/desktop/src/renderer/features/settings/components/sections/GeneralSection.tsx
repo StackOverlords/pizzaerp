@@ -24,10 +24,14 @@ export function GeneralSection() {
   const { t, i18n } = useTranslation()
   const { source, setTheme } = useTheme()
   const [showMenubar, setShowMenubar] = useState(true)
+  const [showTabbar, setShowTabbar]   = useState(true)
 
   useEffect(() => {
     storage.get<boolean>(StorageKeys.titlebar.showMenubar).then((val) => {
       if (val !== null) setShowMenubar(val)
+    })
+    storage.get<boolean>(StorageKeys.titlebar.showTabbar).then((val) => {
+      if (val !== null) setShowTabbar(val)
     })
   }, [])
 
@@ -35,6 +39,12 @@ export function GeneralSection() {
     setShowMenubar(checked)
     await storage.set(StorageKeys.titlebar.showMenubar, checked)
     eventBus.emit('titlebar.menubar.toggled', { visible: checked })
+  }
+
+  const handleTabbarToggle = async (checked: boolean) => {
+    setShowTabbar(checked)
+    await storage.set(StorageKeys.titlebar.showTabbar, checked)
+    eventBus.emit('titlebar.tabbar.toggled', { visible: checked })
   }
 
   const handleLanguageChange = async (lang: string | null) => {
@@ -86,6 +96,20 @@ export function GeneralSection() {
           id="menubar-toggle"
           checked={showMenubar}
           onCheckedChange={handleMenubarToggle}
+        />
+      </div>
+
+      <Separator />
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="tabbar-toggle">{t('settings.general.tabbar.label')}</Label>
+          <p className="text-xs text-muted-foreground">{t('settings.general.tabbar.description')}</p>
+        </div>
+        <Switch
+          id="tabbar-toggle"
+          checked={showTabbar}
+          onCheckedChange={handleTabbarToggle}
         />
       </div>
 

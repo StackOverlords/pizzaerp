@@ -3,10 +3,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Suppress transitions while the sidebar is being dragged */
+body[data-resizing] * {
+  transition: none !important;
+}
+
 @layer base {
   * {
     border-color: hsl(var(--border));
     box-sizing: border-box;
+  }
+
+  html {
+    font-size: var(--app-font-size, 14px);
   }
 
   html, body {
@@ -23,6 +32,32 @@
 
   * {
     font-family: var(--font-sans);
+  }
+
+  /* Styled scrollbars — Chromium/Electron only */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 100px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   :root {

@@ -41,7 +41,6 @@ export function KeybindingsSection() {
       label:     cmd.label,
       binding:   bindingByCmd.get(cmd.id) ?? null,
     }))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overrides])
 
   const filtered = useMemo(() => {

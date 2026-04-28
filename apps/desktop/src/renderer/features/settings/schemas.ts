@@ -9,6 +9,8 @@ export type ThemeSource = (typeof THEME_SOURCE)[keyof typeof THEME_SOURCE]
 
 export const SETTINGS_SECTION = {
   GENERAL:     'general',
+  APPEARANCE:  'appearance',
+  WORKBENCH:   'workbench',
   ACCOUNT:     'account',
   KEYBINDINGS: 'keybindings',
 } as const

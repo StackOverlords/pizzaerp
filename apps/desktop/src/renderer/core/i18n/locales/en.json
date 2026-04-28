@@ -6,13 +6,25 @@
   "commands": {
     "workbench": {
       "toggleSidebar":  "Toggle Sidebar",
-      "showCommands":   "Command Palette"
+      "showCommands":   "Command Palette",
+      "toggleMenubar":  "Toggle Menu Bar",
+      "toggleTabbar":   "Toggle Tab Bar"
     },
     "settings": {
       "open":           "Settings",
       "goGeneral":      "Settings: General",
+      "goAppearance":   "Settings: Appearance",
+      "goWorkbench":    "Settings: Workbench",
       "goAccount":      "Settings: Account",
       "goKeybindings":  "Settings: Keyboard Shortcuts"
+    },
+    "tabs": {
+      "closeActive":    "Close Tab",
+      "nextTab":        "Next Tab",
+      "prevTab":        "Previous Tab",
+      "closeAll":       "Close All Tabs",
+      "pinActive":      "Pin Tab",
+      "unpinActive":    "Unpin Tab"
     }
   },
   "app": {
@@ -34,6 +46,16 @@
     "description": "An unexpected error occurred in the application.",
     "retry": "Try again"
   },
+  "tabs": {
+    "noTabsOpen": "No tabs open",
+    "closeTab": "Close tab",
+    "pinTab": "Pin tab",
+    "unpinTab": "Unpin tab",
+    "closeOthers": "Close others",
+    "closeAll": "Close all",
+    "closeToRight": "Close to the right",
+    "openTabs": "Open tabs ({{count}})"
+  },
   "sidebar": {
     "settings": "Settings"
   },
@@ -41,8 +63,26 @@
     "title": "Settings",
     "sections": {
       "general": "General",
+      "appearance": "Appearance",
+      "workbench": "Workbench",
       "account": "Account",
       "keybindings": "Shortcuts"
+    },
+    "workbench": {
+      "title": "Workbench",
+      "description": "Configure tab behavior and workspace preferences.",
+      "restoreTabs": {
+        "label": "Restore tabs on startup",
+        "description": "Re-open tabs from the previous session when the app starts."
+      },
+      "closeLastTab": {
+        "label": "Allow closing the last tab",
+        "description": "When disabled, the last tab cannot be closed."
+      },
+      "maxTabs": {
+        "label": "Maximum open tabs",
+        "description": "Oldest tabs are closed automatically when the limit is reached."
+      }
     },
     "general": {
       "appearance": {
@@ -60,11 +100,31 @@
         "label": "Menu bar",
         "description": "Show or hide the menu in the titlebar."
       },
+      "tabbar": {
+        "label": "Tab bar",
+        "description": "Show or hide the tab bar in the titlebar."
+      },
       "language": {
         "label": "Language",
         "description": "Interface language.",
         "es": "Español",
         "en": "English"
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Adjust font and icon sizes across the interface.",
+      "fontSize": {
+        "label": "Font size",
+        "description": "Controls the base text size for the entire application."
+      },
+      "sidebarIconSize": {
+        "label": "Sidebar icons",
+        "description": "Size of the icons in the navigation sidebar."
+      },
+      "tabbarIconSize": {
+        "label": "Tab bar icons",
+        "description": "Size of the icons shown in the open tab bar."
       }
     },
     "account": {
