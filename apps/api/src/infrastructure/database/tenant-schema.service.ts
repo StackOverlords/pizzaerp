@@ -26,16 +26,22 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
   )`,
 
   `CREATE TABLE IF NOT EXISTS "${s}".dishes (
-    id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    category_id TEXT REFERENCES "${s}".categories(id),
-    name        TEXT NOT NULL,
-    description TEXT,
-    sale_price  NUMERIC(10,2) NOT NULL,
-    image_url   TEXT,
-    active      BOOLEAN NOT NULL DEFAULT true,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    id             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    category_id    TEXT REFERENCES "${s}".categories(id),
+    name           TEXT NOT NULL,
+    description    TEXT,
+    sale_price     NUMERIC(10,2) NOT NULL,
+    image_url      TEXT,
+    active         BOOLEAN NOT NULL DEFAULT true,
+    available_from TIME,
+    available_to   TIME,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+
+  // Migración idempotente: agrega columnas de disponibilidad horaria a schemas existentes
+  `ALTER TABLE IF EXISTS "${s}".dishes ADD COLUMN IF NOT EXISTS available_from TIME`,
+  `ALTER TABLE IF EXISTS "${s}".dishes ADD COLUMN IF NOT EXISTS available_to TIME`,
 
   `CREATE TABLE IF NOT EXISTS "${s}".dish_ingredients (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -247,9 +253,7 @@ export class TenantSchemaService {
   async migrateAllTenants(): Promise<void> {
     const tenants = await this.db.tenant.findMany({ select: { schema: true } })
     for (const tenant of tenants) {
-      for (const stmt of TENANT_DDL_STATEMENTS(tenant.schema)) {
-        await this.db.$executeRawUnsafe(stmt)
-      }
+      await this.provision(tenant.schema)
     }
   }
 }
