@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { TenantSchemaService } from '../src/infrastructure/database/tenant-schema.service'
 
 const prisma = new PrismaClient()
+const tenantSchemaService = new TenantSchemaService(prisma)
 
 async function main() {
   const passwordHash = await bcrypt.hash('admin123', 12)
@@ -25,6 +27,8 @@ async function main() {
       },
     },
   })
+
+  await tenantSchemaService.provision(tenant.schema)
 
   const branch = await prisma.branch.upsert({
     where: { id: 'branch-maxpizza-central' },
