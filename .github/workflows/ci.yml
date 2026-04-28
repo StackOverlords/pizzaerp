@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API — typecheck + tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pizzaerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pizzaerp_test
+      JWT_SECRET: ci-jwt-secret-at-least-32-chars-long-for-vitest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter api typecheck
+
+      - name: Apply migrations
+        run: pnpm --filter api exec prisma migrate deploy
+
+      - name: Tests
+        run: pnpm --filter api test
+
+  desktop:
+    name: Desktop — typecheck + lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter desktop typecheck
+
+      - name: Lint
+        run: pnpm --filter desktop lint
