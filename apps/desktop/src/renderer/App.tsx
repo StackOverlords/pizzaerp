@@ -43,7 +43,6 @@ function InitialTab() {
     const { tabs, activeTabId } = useTabStore.getState()
     const active = tabs.find((tab) => tab.id === activeTabId)
     if (active) navigate(active.path)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated])
 
   return null
