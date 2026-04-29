@@ -9,6 +9,9 @@ import { PrismaPaymentRepository } from '../../infrastructure/database/repositor
 import { createCreateOrderUseCase } from '../../application/orders/create-order.use-case'
 import { createGetOrderUseCase } from '../../application/orders/get-order.use-case'
 import { createPayOrderUseCase } from '../../application/orders/pay-order.use-case'
+import { createCancelOrderUseCase } from '../../application/orders/cancel-order.use-case'
+import { PrismaOrderCancellationRepository } from '../../infrastructure/database/repositories/prisma-order-cancellation-repository'
+import { userRepository } from '../../shared/container'
 import { Errors } from '../../shared/errors/app-error'
 
 interface CreateOrderBody {
@@ -24,6 +27,12 @@ interface PayOrderBody {
   method: 'CASH' | 'QR'
   amount?: number
   reference?: string
+}
+
+interface CancelOrderBody {
+  adminUsername: string
+  adminPin: string
+  reason?: string
 }
 
 const orderItemSchema = {
@@ -213,6 +222,71 @@ export async function orderRoutes(fastify: FastifyInstance) {
         const paymentRepo = new PrismaPaymentRepository(db, schema)
         const payOrder = createPayOrderUseCase({ orderRepository: orderRepo, paymentRepository: paymentRepo })
         return payOrder({ orderId: request.params.id, method, amount: amount ?? 0, reference })
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // PATCH /orders/:id/cancel — cancelar pedido con PIN de administrador
+  fastify.patch<{ Params: { id: string }; Body: CancelOrderBody }>(
+    '/:id/cancel',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'Cancelar pedido (requiere PIN de administrador)',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        body: {
+          type: 'object',
+          required: ['adminUsername', 'adminPin'],
+          properties: {
+            adminUsername: { type: 'string', minLength: 1 },
+            adminPin: { type: 'string', minLength: 4, maxLength: 6, pattern: '^\\d+$' },
+            reason: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              order: orderResponseSchema,
+              cancellation: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  orderId: { type: 'string' },
+                  adminUserId: { type: 'string' },
+                  cajeroUserId: { type: 'string' },
+                  reason: { type: ['string', 'null'] },
+                  cancelledAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const { user_id, tenant_id } = request.user
+      const { adminUsername, adminPin, reason } = request.body
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const orderRepo = new PrismaOrderRepository(db, schema)
+        const cancellationRepo = new PrismaOrderCancellationRepository(db, schema)
+        const cancelOrder = createCancelOrderUseCase({
+          orderRepository: orderRepo,
+          cancellationRepository: cancellationRepo,
+          userRepository,
+        })
+        return cancelOrder({ orderId: request.params.id, cajeroUserId: user_id, tenantId: tenant_id, adminUsername, adminPin, reason })
       } finally {
         await db.$disconnect()
       }

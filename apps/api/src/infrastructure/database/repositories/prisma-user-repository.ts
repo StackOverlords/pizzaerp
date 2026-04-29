@@ -21,10 +21,15 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toEntity(user)
   }
 
+  async updatePin(userId: string, pinHash: string): Promise<void> {
+    await this.db.user.update({ where: { id: userId }, data: { pinHash } })
+  }
+
   private toEntity(raw: {
     id: string
     username: string
     passwordHash: string
+    pinHash: string | null
     role: string
     tenantId: string
     branchId: string | null
@@ -34,6 +39,7 @@ export class PrismaUserRepository implements IUserRepository {
       id: raw.id,
       username: raw.username,
       passwordHash: raw.passwordHash,
+      pinHash: raw.pinHash,
       role: raw.role as UserRole,
       tenantId: raw.tenantId,
       branchId: raw.branchId,

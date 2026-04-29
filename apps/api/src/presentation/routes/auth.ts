@@ -1,7 +1,11 @@
 import type { FastifyInstance } from 'fastify'
-import { loginUseCase } from '../../shared/container'
+import { loginUseCase, userRepository } from '../../shared/container'
 import { Errors } from '../../shared/errors/app-error'
 import type { JwtPayload } from '../plugins/jwt.plugin'
+import { authenticate } from '../hooks/authenticate.hook'
+import { authorize } from '../hooks/authorize.hook'
+import { UserRole } from '../../domain/entities/user'
+import { createSetPinUseCase } from '../../application/auth/set-pin.use-case'
 
 interface LoginBody {
   username: string
@@ -106,6 +110,32 @@ export async function authRoutes(fastify: FastifyInstance) {
       } satisfies JwtPayload)
 
       return reply.send({ access_token })
+    },
+  )
+
+  // PATCH /auth/pin — ADMIN configura su PIN de autorización (4-6 dígitos)
+  fastify.patch<{ Body: { pin: string } }>(
+    '/pin',
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Configurar PIN de administrador',
+        body: {
+          type: 'object',
+          required: ['pin'],
+          properties: {
+            pin: { type: 'string', minLength: 4, maxLength: 6, pattern: '^\\d+$' },
+          },
+        },
+        response: { 204: { type: 'null' } },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate, authorize([UserRole.ADMIN])],
+    },
+    async (request, reply) => {
+      const setPin = createSetPinUseCase({ userRepository })
+      await setPin(request.user.user_id, request.body.pin)
+      return reply.code(204).send()
     },
   )
 }

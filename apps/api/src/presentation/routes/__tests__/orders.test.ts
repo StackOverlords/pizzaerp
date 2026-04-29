@@ -24,6 +24,8 @@ let tenantId: string
 let branchId: string
 let cajeroToken: string
 let cajeroUserId: string
+let adminToken: string
+let adminUsername: string
 let dishId: string
 let shiftId: string
 
@@ -75,6 +77,21 @@ beforeAll(async () => {
     tenant_id: tenantId,
     branch_id: branchId,
     role: UserRole.CAJERO,
+    type: 'access',
+  } satisfies JwtPayload)
+
+  // Crear admin para tests de cancelación
+  adminUsername = 'orders-admin'
+  const admin = await prisma.user.upsert({
+    where: { username_tenantId: { username: adminUsername, tenantId } },
+    update: {},
+    create: { username: adminUsername, passwordHash, role: 'ADMIN', tenantId, branchId },
+  })
+  adminToken = server.jwt.sign({
+    user_id: admin.id,
+    tenant_id: tenantId,
+    branch_id: branchId,
+    role: UserRole.ADMIN,
     type: 'access',
   } satisfies JwtPayload)
 
@@ -331,6 +348,109 @@ describe('PATCH /api/v1/orders/:id/pay', () => {
       url: '/api/v1/orders/non-existent/pay',
       headers: authHeader(cajeroToken),
       payload: { method: 'QR' },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})
+
+// ─── PATCH /auth/pin + PATCH /orders/:id/cancel ───────────────────────────────
+
+describe('PATCH /api/v1/orders/:id/cancel', () => {
+  const ADMIN_PIN = '1234'
+  let pendingOrderId: string
+
+  beforeAll(async () => {
+    // Admin configura su PIN
+    await server.inject({
+      method: 'PATCH',
+      url: '/api/v1/auth/pin',
+      headers: authHeader(adminToken),
+      payload: { pin: ADMIN_PIN },
+    })
+
+    // Crear pedido PENDING para cancelar
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    pendingOrderId = res.json<{ id: string }>().id
+  })
+
+  it('OR-15 — cajero cancela pedido con PIN válido', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${pendingOrderId}/cancel`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN, reason: 'Cliente se arrepintió' },
+    })
+    expect(res.statusCode).toBe(200)
+    const { order, cancellation } = res.json()
+    expect(order.status).toBe('CANCELLED')
+    expect(cancellation.reason).toBe('Cliente se arrepintió')
+    expect(cancellation.cajeroUserId).toBe(cajeroUserId)
+  })
+
+  it('OR-16 — devuelve 409 si el pedido ya está cancelado', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${pendingOrderId}/cancel`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN },
+    })
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('OR-17 — devuelve 401 si el PIN es incorrecto', async () => {
+    const newOrder = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    const id = newOrder.json<{ id: string }>().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${id}/cancel`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: '9999' },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('OR-18 — devuelve 400 si el admin no tiene PIN configurado', async () => {
+    // Crear otro admin sin PIN
+    const noPinAdmin = await prisma.user.upsert({
+      where: { username_tenantId: { username: 'admin-no-pin', tenantId } },
+      update: {},
+      create: { username: 'admin-no-pin', passwordHash: 'x', role: 'ADMIN', tenantId, branchId },
+    })
+
+    const newOrder = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    const id = newOrder.json<{ id: string }>().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${id}/cancel`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername: noPinAdmin.username, adminPin: '1234' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OR-19 — devuelve 404 para pedido inexistente', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: '/api/v1/orders/non-existent/cancel',
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN },
     })
     expect(res.statusCode).toBe(404)
   })

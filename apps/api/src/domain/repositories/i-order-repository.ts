@@ -25,4 +25,5 @@ export interface IOrderRepository {
   create(data: CreateOrderData): Promise<OrderWithItems>
   findById(id: string): Promise<OrderWithItems | null>
   pay(id: string): Promise<import('../entities/order').Order>
+  cancel(id: string): Promise<import('../entities/order').Order>
 }
