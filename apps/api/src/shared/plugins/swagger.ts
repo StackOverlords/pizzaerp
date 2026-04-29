@@ -15,8 +15,12 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
       tags: [
         { name: 'health', description: 'Health check' },
         { name: 'auth', description: 'Autenticación' },
+        { name: 'ingredients', description: 'Insumos' },
+        { name: 'categories', description: 'Categorías' },
+        { name: 'dishes', description: 'Platillos' },
+        { name: 'dish-ingredients', description: 'Insumos de platillos' },
+        { name: 'combos', description: 'Combos' },
         { name: 'orders', description: 'Pedidos' },
-        { name: 'menu', description: 'Menú' },
       ],
       components: {
         securitySchemes: {
