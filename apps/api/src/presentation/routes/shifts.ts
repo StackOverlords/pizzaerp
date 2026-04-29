@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../hooks/authenticate.hook'
+import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaShiftRepository } from '../../infrastructure/database/repositories/prisma-shift-repository'
@@ -7,10 +8,30 @@ import { PrismaShiftClosureRepository } from '../../infrastructure/database/repo
 import { createOpenShiftUseCase } from '../../application/shifts/open-shift.use-case'
 import { createGetCurrentShiftUseCase } from '../../application/shifts/get-current-shift.use-case'
 import { createCloseShiftUseCase } from '../../application/shifts/close-shift.use-case'
+import { createListClosedShiftsUseCase } from '../../application/shifts/list-closed-shifts.use-case'
+import { userRepository } from '../../shared/container'
+import { UserRole } from '../../domain/entities/user'
 import { Errors } from '../../shared/errors/app-error'
 
 interface OpenShiftBody {
   initialCash: number
+}
+
+const closureSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    shiftId: { type: 'string' },
+    declaredCash: { type: 'number' },
+    declaredQrCount: { type: 'number' },
+    expectedCash: { type: 'number' },
+    expectedQrTotal: { type: 'number' },
+    expectedQrCount: { type: 'number' },
+    cashDifference: { type: 'number' },
+    qrCountDifference: { type: 'number' },
+    notes: { type: ['string', 'null'] },
+    closedAt: { type: 'string', format: 'date-time' },
+  },
 }
 
 const shiftResponseSchema = {
@@ -89,6 +110,68 @@ export async function shiftRoutes(fastify: FastifyInstance) {
         const repo = new PrismaShiftRepository(db, schema)
         const getCurrentShift = createGetCurrentShiftUseCase({ shiftRepository: repo })
         return getCurrentShift(user_id, branch_id)
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // GET /shifts/history — historial paginado de turnos cerrados (solo ADMIN)
+  fastify.get<{ Querystring: { page?: string; limit?: string; from?: string; to?: string } }>(
+    '/history',
+    {
+      schema: {
+        tags: ['shifts'],
+        summary: 'Historial de turnos cerrados (admin)',
+        querystring: {
+          type: 'object',
+          properties: {
+            page:  { type: 'string' },
+            limit: { type: 'string' },
+            from:  { type: 'string', format: 'date-time' },
+            to:    { type: 'string', format: 'date-time' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    ...shiftResponseSchema.properties,
+                    cashierUsername: { type: 'string' },
+                    closure: { oneOf: [closureSchema, { type: 'null' }] },
+                  },
+                },
+              },
+              total: { type: 'number' },
+              page:  { type: 'number' },
+              limit: { type: 'number' },
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate, authorize([UserRole.ADMIN])],
+    },
+    async (request) => {
+      const { tenant_id, branch_id } = request.user
+      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+
+      const page  = parseInt(request.query.page  ?? '1',  10)
+      const limit = parseInt(request.query.limit ?? '10', 10)
+      const from  = request.query.from ? new Date(request.query.from) : undefined
+      const to    = request.query.to   ? new Date(request.query.to)   : undefined
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const shiftRepo   = new PrismaShiftRepository(db, schema)
+        const listClosed  = createListClosedShiftsUseCase({ shiftRepository: shiftRepo, userRepository })
+        return listClosed({ branchId: branch_id, page, limit, from, to })
       } finally {
         await db.$disconnect()
       }

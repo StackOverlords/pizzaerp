@@ -14,4 +14,5 @@ export interface CreateShiftClosureData {
 
 export interface IShiftClosureRepository {
   create(data: CreateShiftClosureData): Promise<ShiftClosure>
+  findByShiftId(shiftId: string): Promise<ShiftClosure | null>
 }

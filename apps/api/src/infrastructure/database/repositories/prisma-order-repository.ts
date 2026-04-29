@@ -123,6 +123,18 @@ export class PrismaOrderRepository implements IOrderRepository {
     return this.toOrderEntity(rows[0])
   }
 
+  async findByShiftId(shiftId: string): Promise<Order[]> {
+    const rows = await this.db.$queryRawUnsafe<RawOrder[]>(
+      `SELECT id, order_number, shift_id, branch_id, user_id, status,
+              subtotal, discount_amount, total, notes, created_at, updated_at
+       FROM "${this.schema}".orders
+       WHERE shift_id = $1
+       ORDER BY created_at ASC`,
+      shiftId,
+    )
+    return rows.map(r => this.toOrderEntity(r))
+  }
+
   async findById(id: string): Promise<OrderWithItems | null> {
     const orderRows = await this.db.$queryRawUnsafe<RawOrder[]>(
       `SELECT id, order_number, shift_id, branch_id, user_id, status,

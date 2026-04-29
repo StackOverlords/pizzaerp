@@ -22,6 +22,18 @@ export class PrismaShiftClosureRepository implements IShiftClosureRepository {
     private readonly schema: string,
   ) {}
 
+  async findByShiftId(shiftId: string): Promise<ShiftClosure | null> {
+    const rows = await this.db.$queryRawUnsafe<RawClosure[]>(
+      `SELECT id, shift_id, declared_cash, declared_qr_count, expected_cash,
+              expected_qr_total, expected_qr_count, cash_difference, qr_count_difference,
+              notes, closed_at
+       FROM "${this.schema}".shift_closures
+       WHERE shift_id = $1`,
+      shiftId,
+    )
+    return rows[0] ? this.toEntity(rows[0]) : null
+  }
+
   async create(data: CreateShiftClosureData): Promise<ShiftClosure> {
     const rows = await this.db.$queryRawUnsafe<RawClosure[]>(
       `INSERT INTO "${this.schema}".shift_closures

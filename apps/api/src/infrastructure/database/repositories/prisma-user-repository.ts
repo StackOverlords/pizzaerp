@@ -21,6 +21,11 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toEntity(user)
   }
 
+  async findByIds(ids: string[]): Promise<Pick<User, 'id' | 'username'>[]> {
+    if (ids.length === 0) return []
+    return this.db.user.findMany({ where: { id: { in: ids } }, select: { id: true, username: true } })
+  }
+
   async updatePin(userId: string, pinHash: string): Promise<void> {
     await this.db.user.update({ where: { id: userId }, data: { pinHash } })
   }

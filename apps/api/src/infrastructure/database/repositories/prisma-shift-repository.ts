@@ -1,8 +1,8 @@
 import type { PrismaClient } from '@prisma/client'
-import type { IShiftRepository, OpenShiftData } from '../../../domain/repositories/i-shift-repository'
-import type { Shift } from '../../../domain/entities/shift'
+import type { IShiftRepository, OpenShiftData, FindClosedOpts } from '../../../domain/repositories/i-shift-repository'
+import type { Shift, ShiftWithClosure } from '../../../domain/entities/shift'
 import type { ShiftStatus } from '../../../domain/entities/shift'
-import type { ShiftSalesSummary } from '../../../domain/entities/shift-closure'
+import type { ShiftSalesSummary, ShiftClosure } from '../../../domain/entities/shift-closure'
 
 type RawShift = {
   id: string
@@ -85,6 +85,78 @@ export class PrismaShiftRepository implements IShiftRepository {
       cashFromSales: Number(row.cash_from_sales),
       qrTotal: Number(row.qr_total),
       qrCount: Number(row.qr_count),
+    }
+  }
+
+  async findClosed(branchId: string, opts: FindClosedOpts): Promise<{ data: ShiftWithClosure[]; total: number }> {
+    const offset = (opts.page - 1) * opts.limit
+    const from = opts.from ?? null
+    const to = opts.to ?? null
+
+    type RawRow = RawShift & {
+      closure_id: string | null
+      closure_declared_cash: unknown
+      closure_declared_qr_count: number | bigint | null
+      closure_expected_cash: unknown
+      closure_expected_qr_total: unknown
+      closure_expected_qr_count: number | bigint | null
+      closure_cash_difference: unknown
+      closure_qr_count_difference: number | bigint | null
+      closure_notes: string | null
+      closure_closed_at: Date | null
+    }
+
+    const rows = await this.db.$queryRawUnsafe<RawRow[]>(
+      `SELECT s.id, s.branch_id, s.user_id, s.opened_at, s.closed_at, s.initial_cash, s.status,
+              sc.id              AS closure_id,
+              sc.declared_cash   AS closure_declared_cash,
+              sc.declared_qr_count AS closure_declared_qr_count,
+              sc.expected_cash   AS closure_expected_cash,
+              sc.expected_qr_total AS closure_expected_qr_total,
+              sc.expected_qr_count AS closure_expected_qr_count,
+              sc.cash_difference AS closure_cash_difference,
+              sc.qr_count_difference AS closure_qr_count_difference,
+              sc.notes           AS closure_notes,
+              sc.closed_at       AS closure_closed_at
+       FROM "${this.schema}".shifts s
+       LEFT JOIN "${this.schema}".shift_closures sc ON sc.shift_id = s.id
+       WHERE s.branch_id = $1 AND s.status = 'CLOSED'
+         AND ($2::timestamptz IS NULL OR s.closed_at >= $2)
+         AND ($3::timestamptz IS NULL OR s.closed_at <= $3)
+       ORDER BY s.opened_at DESC
+       LIMIT $4 OFFSET $5`,
+      branchId, from, to, opts.limit, offset,
+    )
+
+    const countRows = await this.db.$queryRawUnsafe<{ total: bigint }[]>(
+      `SELECT COUNT(*) AS total
+       FROM "${this.schema}".shifts s
+       WHERE s.branch_id = $1 AND s.status = 'CLOSED'
+         AND ($2::timestamptz IS NULL OR s.closed_at >= $2)
+         AND ($3::timestamptz IS NULL OR s.closed_at <= $3)`,
+      branchId, from, to,
+    )
+
+    const toShiftClosure = (row: RawRow): ShiftClosure | null => {
+      if (!row.closure_id) return null
+      return {
+        id: row.closure_id,
+        shiftId: row.id,
+        declaredCash: Number(row.closure_declared_cash),
+        declaredQrCount: Number(row.closure_declared_qr_count),
+        expectedCash: Number(row.closure_expected_cash),
+        expectedQrTotal: Number(row.closure_expected_qr_total),
+        expectedQrCount: Number(row.closure_expected_qr_count),
+        cashDifference: Number(row.closure_cash_difference),
+        qrCountDifference: Number(row.closure_qr_count_difference),
+        notes: row.closure_notes,
+        closedAt: row.closure_closed_at!,
+      }
+    }
+
+    return {
+      data: rows.map(row => ({ ...this.toEntity(row), closure: toShiftClosure(row) })),
+      total: Number(countRows[0].total),
     }
   }
 

@@ -273,3 +273,71 @@ describe('POST /api/v1/shifts/close', () => {
     expect(res.statusCode).toBe(401)
   })
 })
+
+// ─── GET /shifts/history ──────────────────────────────────────────────────────
+
+describe('GET /api/v1/shifts/history', () => {
+  it('SH-14 — admin obtiene historial paginado de turnos cerrados', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/history?page=1&limit=10',
+      headers: authHeader(adminToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.page).toBe(1)
+    expect(body.limit).toBe(10)
+    expect(typeof body.total).toBe('number')
+    expect(body.total).toBeGreaterThanOrEqual(2)
+    expect(Array.isArray(body.data)).toBe(true)
+    const first = body.data[0]
+    expect(first.status).toBe('CLOSED')
+    expect(typeof first.cashierUsername).toBe('string')
+    expect(first.closure).not.toBeNull()
+  })
+
+  it('SH-15 — cada item incluye el closure con los campos correctos', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/history?page=1&limit=10',
+      headers: authHeader(adminToken),
+    })
+    const { data } = res.json()
+    for (const item of data) {
+      expect(item.closure).toHaveProperty('declaredCash')
+      expect(item.closure).toHaveProperty('expectedCash')
+      expect(item.closure).toHaveProperty('cashDifference')
+      expect(item.closure).toHaveProperty('closedAt')
+    }
+  })
+
+  it('SH-16 — paginación: limit=1 devuelve solo 1 item y total correcto', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/history?page=1&limit=1',
+      headers: authHeader(adminToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.total).toBeGreaterThanOrEqual(2)
+    expect(body.limit).toBe(1)
+  })
+
+  it('SH-17 — cajero recibe 403', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/history',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('SH-18 — devuelve 401 sin token', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/history',
+    })
+    expect(res.statusCode).toBe(401)
+  })
+})
