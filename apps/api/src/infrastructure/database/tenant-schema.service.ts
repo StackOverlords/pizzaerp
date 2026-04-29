@@ -108,6 +108,7 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
 
   `CREATE TABLE IF NOT EXISTS "${s}".orders (
     id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    order_number    INT NOT NULL DEFAULT 1,
     shift_id        TEXT NOT NULL REFERENCES "${s}".shifts(id),
     branch_id       TEXT NOT NULL,
     user_id         TEXT NOT NULL,
@@ -119,6 +120,9 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+
+  // Migración idempotente: agrega order_number a schemas existentes
+  `ALTER TABLE IF EXISTS "${s}".orders ADD COLUMN IF NOT EXISTS order_number INT NOT NULL DEFAULT 1`,
 
   `CREATE TABLE IF NOT EXISTS "${s}".order_items (
     id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -160,12 +164,16 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
   )`,
 
   `CREATE TABLE IF NOT EXISTS "${s}".order_cancellations (
-    id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    order_id      TEXT NOT NULL REFERENCES "${s}".orders(id),
-    admin_user_id TEXT NOT NULL,
-    reason        TEXT,
-    cancelled_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    id             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    order_id       TEXT NOT NULL REFERENCES "${s}".orders(id),
+    admin_user_id  TEXT NOT NULL,
+    cajero_user_id TEXT NOT NULL,
+    reason         TEXT,
+    cancelled_at   TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+
+  // Migración idempotente: agrega cajero_user_id a schemas existentes
+  `ALTER TABLE IF EXISTS "${s}".order_cancellations ADD COLUMN IF NOT EXISTS cajero_user_id TEXT NOT NULL DEFAULT ''`,
 
   `CREATE TABLE IF NOT EXISTS "${s}".order_discounts (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
