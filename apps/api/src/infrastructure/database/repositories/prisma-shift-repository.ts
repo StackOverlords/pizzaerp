@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import type { IShiftRepository, OpenShiftData } from '../../../domain/repositories/i-shift-repository'
 import type { Shift } from '../../../domain/entities/shift'
 import type { ShiftStatus } from '../../../domain/entities/shift'
+import type { ShiftSalesSummary } from '../../../domain/entities/shift-closure'
 
 type RawShift = {
   id: string
@@ -51,6 +52,40 @@ export class PrismaShiftRepository implements IShiftRepository {
       data.initialCash,
     )
     return this.toEntity(rows[0])
+  }
+
+  async close(id: string): Promise<Shift> {
+    const rows = await this.db.$queryRawUnsafe<RawShift[]>(
+      `UPDATE "${this.schema}".shifts
+       SET status = 'CLOSED', closed_at = now()
+       WHERE id = $1
+       RETURNING id, branch_id, user_id, opened_at, closed_at, initial_cash, status`,
+      id,
+    )
+    return this.toEntity(rows[0])
+  }
+
+  async getSalesSummary(shiftId: string): Promise<ShiftSalesSummary> {
+    const rows = await this.db.$queryRawUnsafe<{
+      cash_from_sales: unknown
+      qr_total: unknown
+      qr_count: bigint
+    }[]>(
+      `SELECT
+         COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'CASH'), 0) AS cash_from_sales,
+         COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'QR'),  0) AS qr_total,
+         COALESCE(COUNT(p.id)  FILTER (WHERE p.method = 'QR'),  0) AS qr_count
+       FROM "${this.schema}".payments p
+       JOIN "${this.schema}".orders o ON o.id = p.order_id
+       WHERE o.shift_id = $1 AND o.status = 'PAID'`,
+      shiftId,
+    )
+    const row = rows[0]
+    return {
+      cashFromSales: Number(row.cash_from_sales),
+      qrTotal: Number(row.qr_total),
+      qrCount: Number(row.qr_count),
+    }
   }
 
   private toEntity(raw: RawShift): Shift {

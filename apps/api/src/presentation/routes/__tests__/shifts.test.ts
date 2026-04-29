@@ -200,3 +200,76 @@ describe('GET /api/v1/shifts/current — con turno activo', () => {
     expect(body.userId).toBe(cajeroUserId)
   })
 })
+
+// ─── POST /shifts/close ───────────────────────────────────────────────────────
+
+describe('POST /api/v1/shifts/close', () => {
+  it('SH-09 — cierra turno sin diferencia (cuadre exacto)', async () => {
+    // El turno abierto en SH-03 no tiene pagos → expected_cash = 200 (initialCash)
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 200, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(200)
+    const { shift, closure } = res.json()
+    expect(shift.status).toBe('CLOSED')
+    expect(closure.expectedCash).toBe(200)
+    expect(closure.declaredCash).toBe(200)
+    expect(closure.cashDifference).toBe(0)
+    expect(closure.qrCountDifference).toBe(0)
+    expect(closure.notes).toBeNull()
+  })
+
+  it('SH-10 — devuelve 409 si no hay turno abierto', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 200, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('SH-11 — cierre con diferencia requiere observación', async () => {
+    // Abrir nuevo turno
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+
+    // Intentar cerrar sin observación y con diferencia
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 50, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('SH-12 — cierra turno con diferencia y observación', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 50, declaredQrCount: 0, notes: 'Se extraviaron 50 Bs' },
+    })
+    expect(res.statusCode).toBe(200)
+    const { closure } = res.json()
+    expect(closure.cashDifference).toBe(-50)  // 50 declarado - 100 esperado
+    expect(closure.notes).toBe('Se extraviaron 50 Bs')
+  })
+
+  it('SH-13 — devuelve 401 sin token', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      payload: { declaredCash: 100, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+})
