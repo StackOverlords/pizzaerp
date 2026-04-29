@@ -10,7 +10,9 @@ import { createCreateOrderUseCase } from '../../application/orders/create-order.
 import { createGetOrderUseCase } from '../../application/orders/get-order.use-case'
 import { createPayOrderUseCase } from '../../application/orders/pay-order.use-case'
 import { createCancelOrderUseCase } from '../../application/orders/cancel-order.use-case'
+import { createApplyDiscountUseCase } from '../../application/orders/apply-discount.use-case'
 import { PrismaOrderCancellationRepository } from '../../infrastructure/database/repositories/prisma-order-cancellation-repository'
+import { PrismaOrderDiscountRepository } from '../../infrastructure/database/repositories/prisma-order-discount-repository'
 import { userRepository } from '../../shared/container'
 import { Errors } from '../../shared/errors/app-error'
 
@@ -32,6 +34,14 @@ interface PayOrderBody {
 interface CancelOrderBody {
   adminUsername: string
   adminPin: string
+  reason?: string
+}
+
+interface ApplyDiscountBody {
+  adminUsername: string
+  adminPin: string
+  type: 'AMOUNT' | 'PERCENTAGE'
+  value: number
   reason?: string
 }
 
@@ -287,6 +297,75 @@ export async function orderRoutes(fastify: FastifyInstance) {
           userRepository,
         })
         return cancelOrder({ orderId: request.params.id, cajeroUserId: user_id, tenantId: tenant_id, adminUsername, adminPin, reason })
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // PATCH /orders/:id/discount — aplicar descuento con PIN de administrador
+  fastify.patch<{ Params: { id: string }; Body: ApplyDiscountBody }>(
+    '/:id/discount',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'Aplicar descuento (AMOUNT o PERCENTAGE) con PIN de administrador',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        body: {
+          type: 'object',
+          required: ['adminUsername', 'adminPin', 'type', 'value'],
+          properties: {
+            adminUsername: { type: 'string', minLength: 1 },
+            adminPin: { type: 'string', minLength: 4, maxLength: 6, pattern: '^\\d+$' },
+            type: { type: 'string', enum: ['AMOUNT', 'PERCENTAGE'] },
+            value: { type: 'number', exclusiveMinimum: 0 },
+            reason: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              order: orderResponseSchema,
+              discount: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  orderId: { type: 'string' },
+                  adminUserId: { type: 'string' },
+                  type: { type: 'string', enum: ['AMOUNT', 'PERCENTAGE'] },
+                  value: { type: 'number' },
+                  amount: { type: 'number' },
+                  reason: { type: ['string', 'null'] },
+                  appliedAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const { user_id: _userId, tenant_id } = request.user
+      const { adminUsername, adminPin, type, value, reason } = request.body
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const orderRepo = new PrismaOrderRepository(db, schema)
+        const discountRepo = new PrismaOrderDiscountRepository(db, schema)
+        const applyDiscount = createApplyDiscountUseCase({
+          orderRepository: orderRepo,
+          discountRepository: discountRepo,
+          userRepository,
+        })
+        return applyDiscount({ orderId: request.params.id, tenantId: tenant_id, adminUsername, adminPin, type, value, reason })
       } finally {
         await db.$disconnect()
       }

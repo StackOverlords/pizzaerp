@@ -84,6 +84,21 @@ export class PrismaOrderRepository implements IOrderRepository {
     return { ...order, items: itemRows.map(r => this.toItemEntity(r)) }
   }
 
+  async applyDiscount(id: string, discountAmount: number): Promise<Order> {
+    const rows = await this.db.$queryRawUnsafe<RawOrder[]>(
+      `UPDATE "${this.schema}".orders
+       SET discount_amount = discount_amount + $2,
+           total           = subtotal - (discount_amount + $2),
+           updated_at      = now()
+       WHERE id = $1
+       RETURNING id, order_number, shift_id, branch_id, user_id, status,
+                 subtotal, discount_amount, total, notes, created_at, updated_at`,
+      id,
+      discountAmount,
+    )
+    return this.toOrderEntity(rows[0])
+  }
+
   async cancel(id: string): Promise<Order> {
     const rows = await this.db.$queryRawUnsafe<RawOrder[]>(
       `UPDATE "${this.schema}".orders

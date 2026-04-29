@@ -455,3 +455,99 @@ describe('PATCH /api/v1/orders/:id/cancel', () => {
     expect(res.statusCode).toBe(404)
   })
 })
+
+// ─── PATCH /orders/:id/discount ───────────────────────────────────────────────
+
+describe('PATCH /api/v1/orders/:id/discount', () => {
+  const ADMIN_PIN = '1234'
+  let discountOrderId: string
+
+  beforeAll(async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 2 }] },  // total = 110
+    })
+    discountOrderId = res.json<{ id: string }>().id
+  })
+
+  it('OR-20 — aplica descuento por AMOUNT correctamente', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${discountOrderId}/discount`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN, type: 'AMOUNT', value: 10, reason: 'cliente frecuente' },
+    })
+    expect(res.statusCode).toBe(200)
+    const { order, discount } = res.json()
+    expect(order.discountAmount).toBe(10)
+    expect(order.total).toBe(100)   // 110 - 10
+    expect(discount.type).toBe('AMOUNT')
+    expect(discount.value).toBe(10)
+    expect(discount.amount).toBe(10)
+    expect(discount.reason).toBe('cliente frecuente')
+  })
+
+  it('OR-21 — aplica descuento por PERCENTAGE correctamente', async () => {
+    const newOrder = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 2 }] },  // total = 110
+    })
+    const id = newOrder.json<{ id: string }>().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${id}/discount`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN, type: 'PERCENTAGE', value: 10 },
+    })
+    expect(res.statusCode).toBe(200)
+    const { order, discount } = res.json()
+    expect(order.discountAmount).toBeCloseTo(11)   // 10% de 110
+    expect(order.total).toBeCloseTo(99)
+    expect(discount.type).toBe('PERCENTAGE')
+    expect(discount.value).toBe(10)
+    expect(discount.amount).toBeCloseTo(11)
+  })
+
+  it('OR-22 — devuelve 400 si el descuento supera el total', async () => {
+    const newOrder = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },  // total = 55
+    })
+    const id = newOrder.json<{ id: string }>().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${id}/discount`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN, type: 'AMOUNT', value: 100 },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OR-23 — devuelve 401 si el PIN es incorrecto', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${discountOrderId}/discount`,
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: '9999', type: 'AMOUNT', value: 5 },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('OR-24 — devuelve 404 para pedido inexistente', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: '/api/v1/orders/non-existent/discount',
+      headers: authHeader(cajeroToken),
+      payload: { adminUsername, adminPin: ADMIN_PIN, type: 'AMOUNT', value: 5 },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})

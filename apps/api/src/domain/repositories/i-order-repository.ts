@@ -26,4 +26,5 @@ export interface IOrderRepository {
   findById(id: string): Promise<OrderWithItems | null>
   pay(id: string): Promise<import('../entities/order').Order>
   cancel(id: string): Promise<import('../entities/order').Order>
+  applyDiscount(id: string, discountAmount: number): Promise<import('../entities/order').Order>
 }
