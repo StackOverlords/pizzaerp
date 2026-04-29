@@ -230,3 +230,108 @@ describe('GET /api/v1/orders/:id', () => {
     expect(res.statusCode).toBe(404)
   })
 })
+
+// ─── PATCH /orders/:id/pay ────────────────────────────────────────────────────
+
+describe('PATCH /api/v1/orders/:id/pay', () => {
+  let cashOrderId: string
+  let qrOrderId: string
+
+  beforeAll(async () => {
+    const r1 = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    cashOrderId = r1.json<{ id: string }>().id
+
+    const r2 = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 2 }] },
+    })
+    qrOrderId = r2.json<{ id: string }>().id
+  })
+
+  it('OR-09 — pago en efectivo con vuelto correcto', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${cashOrderId}/pay`,
+      headers: authHeader(cajeroToken),
+      payload: { method: 'CASH', amount: 100 },
+    })
+    expect(res.statusCode).toBe(200)
+    const { order, payment } = res.json()
+    expect(order.status).toBe('PAID')
+    expect(payment.method).toBe('CASH')
+    expect(payment.amount).toBe(100)
+    expect(payment.changeAmount).toBe(45)   // 100 - 55
+    expect(payment.changeAmount).toBeCloseTo(100 - 55)
+  })
+
+  it('OR-10 — pago QR con referencia', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${qrOrderId}/pay`,
+      headers: authHeader(cajeroToken),
+      payload: { method: 'QR', reference: 'REF-001' },
+    })
+    expect(res.statusCode).toBe(200)
+    const { order, payment } = res.json()
+    expect(order.status).toBe('PAID')
+    expect(payment.method).toBe('QR')
+    expect(payment.amount).toBe(110)   // total del pedido
+    expect(payment.changeAmount).toBeNull()
+    expect(payment.reference).toBe('REF-001')
+  })
+
+  it('OR-11 — devuelve 409 si el pedido ya está pagado', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${cashOrderId}/pay`,
+      headers: authHeader(cajeroToken),
+      payload: { method: 'CASH', amount: 100 },
+    })
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('OR-12 — devuelve 400 si monto CASH es menor al total', async () => {
+    const newOrder = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    const id = newOrder.json<{ id: string }>().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${id}/pay`,
+      headers: authHeader(cajeroToken),
+      payload: { method: 'CASH', amount: 10 },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OR-13 — devuelve 400 si falta amount para CASH', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/orders/${cashOrderId}/pay`,
+      headers: authHeader(cajeroToken),
+      payload: { method: 'CASH' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OR-14 — devuelve 404 para pedido inexistente', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: '/api/v1/orders/non-existent/pay',
+      headers: authHeader(cajeroToken),
+      payload: { method: 'QR' },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})

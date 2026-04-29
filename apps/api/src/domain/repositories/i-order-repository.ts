@@ -24,4 +24,5 @@ export interface IOrderRepository {
   getNextOrderNumber(branchId: string): Promise<number>
   create(data: CreateOrderData): Promise<OrderWithItems>
   findById(id: string): Promise<OrderWithItems | null>
+  pay(id: string): Promise<import('../entities/order').Order>
 }

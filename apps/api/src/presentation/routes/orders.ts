@@ -5,8 +5,10 @@ import { createTenantClient } from '../../infrastructure/database/tenant-client.
 import { PrismaOrderRepository } from '../../infrastructure/database/repositories/prisma-order-repository'
 import { PrismaShiftRepository } from '../../infrastructure/database/repositories/prisma-shift-repository'
 import { PrismaDishRepository } from '../../infrastructure/database/repositories/prisma-dish-repository'
+import { PrismaPaymentRepository } from '../../infrastructure/database/repositories/prisma-payment-repository'
 import { createCreateOrderUseCase } from '../../application/orders/create-order.use-case'
 import { createGetOrderUseCase } from '../../application/orders/get-order.use-case'
+import { createPayOrderUseCase } from '../../application/orders/pay-order.use-case'
 import { Errors } from '../../shared/errors/app-error'
 
 interface CreateOrderBody {
@@ -16,6 +18,12 @@ interface CreateOrderBody {
     notes?: string
   }>
   notes?: string
+}
+
+interface PayOrderBody {
+  method: 'CASH' | 'QR'
+  amount?: number
+  reference?: string
 }
 
 const orderItemSchema = {
@@ -49,6 +57,27 @@ const orderResponseSchema = {
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
     items: { type: 'array', items: orderItemSchema },
+  },
+}
+
+const paymentSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    orderId: { type: 'string' },
+    method: { type: 'string', enum: ['CASH', 'QR'] },
+    amount: { type: 'number' },
+    changeAmount: { type: ['number', 'null'] },
+    reference: { type: ['string', 'null'] },
+    paidAt: { type: 'string', format: 'date-time' },
+  },
+}
+
+const payOrderResponseSchema = {
+  type: 'object',
+  properties: {
+    order: orderResponseSchema,
+    payment: paymentSchema,
   },
 }
 
@@ -138,6 +167,52 @@ export async function orderRoutes(fastify: FastifyInstance) {
         const orderRepo = new PrismaOrderRepository(db, schema)
         const getOrder = createGetOrderUseCase({ orderRepository: orderRepo })
         return getOrder(request.params.id)
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // PATCH /orders/:id/pay — cobrar pedido (CASH o QR)
+  fastify.patch<{ Params: { id: string }; Body: PayOrderBody }>(
+    '/:id/pay',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'Cobrar pedido (CASH o QR)',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        body: {
+          type: 'object',
+          required: ['method'],
+          properties: {
+            method: { type: 'string', enum: ['CASH', 'QR'] },
+            amount: { type: 'number', minimum: 0 },
+            reference: { type: 'string' },
+          },
+        },
+        response: { 200: payOrderResponseSchema },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const { method, amount, reference } = request.body
+      if (method === 'CASH' && amount === undefined) {
+        throw Errors.badRequest('Se requiere el monto recibido para pago en efectivo')
+      }
+
+      const { tenant_id } = request.user
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const orderRepo = new PrismaOrderRepository(db, schema)
+        const paymentRepo = new PrismaPaymentRepository(db, schema)
+        const payOrder = createPayOrderUseCase({ orderRepository: orderRepo, paymentRepository: paymentRepo })
+        return payOrder({ orderId: request.params.id, method, amount: amount ?? 0, reference })
       } finally {
         await db.$disconnect()
       }
