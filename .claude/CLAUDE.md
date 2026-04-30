@@ -100,9 +100,16 @@ Agregar el `CREATE TABLE IF NOT EXISTS` en `tenant-schema.service.ts` dentro de 
 ### Git flow
 
 ```
-feature/X  →  PR  →  develop  →  PR  →  main  →  CI/CD  →  VPS
+feat/X  ──►  PR  ──►  develop  ──►  PR  ──►  main  ──►  CI/CD  ──►  VPS
+fix/X   ──┘                    └──► (automático con cada merge a main)
+chore/X ──┘
 ```
 
+**Reglas obligatorias:**
+- Cada ticket/tarea arranca en su propia rama: `feat/sta-XX-nombre`, `fix/sta-XX-nombre`, `chore/descripcion`
+- Una rama = un propósito. Nunca acumular commits de múltiples features en la misma rama
+- PR de la feature branch → `develop` (revisión + tests)
+- Cuando `develop` está estable → PR `develop` → `main` (dispara deploy al VPS)
 - Nunca commitear directo a `develop` ni a `main`
 - El deploy al VPS se dispara automáticamente con cada push a `main`
 
