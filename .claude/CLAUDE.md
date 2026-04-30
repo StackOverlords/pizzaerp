@@ -2,6 +2,112 @@ Nunca pongas en los commits: Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropi
 
 # MaxPizza — Conventions
 
+---
+
+## API Backend — Convenciones
+
+### Arquitectura
+
+Clean Architecture en 4 capas — nunca saltear capas:
+
+```
+domain/        → entidades e interfaces (sin lógica, sin imports de otras capas)
+application/   → use cases (lógica de negocio, un archivo por operación)
+infrastructure/→ repositorios Prisma (SQL real)
+presentation/  → rutas Fastify (HTTP, validación de input, serialización)
+```
+
+### Estructura de carpetas
+
+```
+apps/api/src/
+├── domain/
+│   ├── entities/          # interfaces planas de entidad
+│   └── repositories/      # interfaces IXRepository + tipos CreateXData/UpdateXData
+├── application/
+│   └── X/                 # create-X.use-case.ts, list-X.use-case.ts, etc.
+├── infrastructure/
+│   └── database/
+│       ├── repositories/  # PrismaXRepository implements IXRepository
+│       └── tenant-schema.service.ts  # DDL de tablas del tenant
+├── presentation/
+│   └── routes/            # X.ts + __tests__/X.test.ts
+└── shared/
+    └── errors/app-error.ts  # Errors.notFound / badRequest / conflict / etc.
+```
+
+### Entidades
+
+```ts
+// ✅ id: string, createdAt: Date siempre presentes
+// ✅ Campos opcionales: field: string | null  (nunca undefined)
+// ✅ Enums como const object
+const ShiftStatus = { OPEN: 'OPEN', CLOSED: 'CLOSED' } as const
+type ShiftStatus = (typeof ShiftStatus)[keyof typeof ShiftStatus]
+
+// ❌ Nunca union literal directo
+type ShiftStatus = 'OPEN' | 'CLOSED'
+```
+
+### Use cases
+
+```ts
+// Un archivo por operación: create-X.use-case.ts, list-X.use-case.ts, etc.
+// Siempre: función factory que recibe dependencias → devuelve la función ejecutora
+export function createCreateXUseCase({ xRepository }: Dependencies) {
+  return async function createX(data: CreateXData): Promise<X> {
+    // validaciones de negocio acá
+    return xRepository.create(data)
+  }
+}
+```
+
+Errores disponibles: `Errors.notFound()` · `Errors.badRequest()` · `Errors.conflict()` · `Errors.unauthorized()` · `Errors.forbidden()`
+
+### Repositorios (SQL)
+
+```ts
+// ✅ $queryRawUnsafe con placeholders $1, $2... para datos de usuario
+// ✅ Schema interpolado solo en nombre de tabla — viene de la DB, no del usuario
+// ✅ Columnas NUMERIC/DECIMAL → Number() en toEntity()
+// ✅ INSERT/UPDATE siempre con RETURNING — no hacer segunda query
+// ✅ snake_case en DB → camelCase en entidad via toEntity()
+
+async create(data: CreateXData): Promise<X> {
+  const rows = await this.db.$queryRawUnsafe<RawX[]>(
+    `INSERT INTO "${this.schema}".table (col) VALUES ($1) RETURNING *`,
+    data.field,
+  )
+  return this.toEntity(rows[0])
+}
+```
+
+### Rutas
+
+```ts
+// ✅ preHandler: [authenticate]                        → ADMIN y CASHIER
+// ✅ preHandler: [authenticate, authorize([UserRole.ADMIN])]  → solo ADMIN
+// ✅ Siempre try/finally con db.$disconnect()
+// ✅ POST → reply.code(201).send(result)
+// ✅ DELETE → reply.code(204).send()
+// ✅ GET/PUT/PATCH → return result  (Fastify serializa con 200)
+```
+
+### Tablas nuevas
+
+Agregar el `CREATE TABLE IF NOT EXISTS` en `tenant-schema.service.ts` dentro de `TENANT_DDL_STATEMENTS`. Aplica solo a tenants nuevos — para existentes ejecutar el SQL manualmente.
+
+### Git flow
+
+```
+feature/X  →  PR  →  develop  →  PR  →  main  →  CI/CD  →  VPS
+```
+
+- Nunca commitear directo a `develop` ni a `main`
+- El deploy al VPS se dispara automáticamente con cada push a `main`
+
+---
+
 ## Stack
 Electron + React 19 + Vite · TypeScript strict · Tailwind + shadcn · React Router 7 (MemoryRouter) · Zustand 5 · TanStack Query · Axios · Zod · React Hook Form
 
