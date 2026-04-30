@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client'
-import type { IDoughTransferRepository, CreateDoughTransferData, ListDoughTransfersOpts } from '../../../domain/repositories/i-dough-transfer-repository'
+import type { IDoughTransferRepository, CreateDoughTransferData, ListDoughTransfersOpts, ReceiveItemData } from '../../../domain/repositories/i-dough-transfer-repository'
 import type { DoughTransfer, DoughTransferItem, DoughTransferWithItems, DoughTransferStatus, DoughType } from '../../../domain/entities/dough-transfer'
 
 type RawTransfer = {
@@ -121,6 +121,35 @@ export class PrismaDoughTransferRepository implements IDoughTransferRepository {
       id, status, receivedAt,
     )
     return this.toEntity(rows[0])
+  }
+
+  async receive(id: string, items: ReceiveItemData[], notes: string | null): Promise<DoughTransferWithItems> {
+    for (const item of items) {
+      await this.db.$queryRawUnsafe(
+        `UPDATE "${this.schema}".dough_transfer_items
+         SET quantity_received = $2, notes = COALESCE($3, notes)
+         WHERE transfer_id = $1 AND dough_type = $4`,
+        id, item.quantityReceived, item.notes, item.doughType,
+      )
+    }
+
+    const transfers = await this.db.$queryRawUnsafe<RawTransfer[]>(
+      `UPDATE "${this.schema}".dough_transfers
+       SET status = 'RECEIVED', received_at = now(), notes = COALESCE($2, notes)
+       WHERE id = $1
+       RETURNING *`,
+      id, notes,
+    )
+
+    const updatedItems = await this.db.$queryRawUnsafe<RawItem[]>(
+      `SELECT * FROM "${this.schema}".dough_transfer_items WHERE transfer_id = $1`,
+      id,
+    )
+
+    return {
+      ...this.toEntity(transfers[0]),
+      items: updatedItems.map(i => this.toItemEntity(i)),
+    }
   }
 
   private toEntity(raw: RawTransfer): DoughTransfer {
