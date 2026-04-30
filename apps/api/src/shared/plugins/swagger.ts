@@ -23,6 +23,7 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
         { name: 'shifts', description: 'Turnos de caja' },
         { name: 'orders', description: 'Pedidos' },
         { name: 'dough-transfers', description: 'Transferencias de masas' },
+        { name: 'dough-wastages', description: 'Mermas de masas' },
       ],
       components: {
         securitySchemes: {
