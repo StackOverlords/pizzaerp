@@ -1,7 +1,9 @@
 import type { PrismaClient } from '@prisma/client'
-import type { IDoughDayClosureRepository, CreateDoughDayClosureData } from '../../../domain/repositories/i-dough-day-closure-repository'
+import type { IDoughDayClosureRepository, CreateDoughDayClosureData, ReportOpts } from '../../../domain/repositories/i-dough-day-closure-repository'
 import type { DoughDayClosure, DoughClosureSummary } from '../../../domain/entities/dough-day-closure'
 import type { DoughType } from '../../../domain/entities/dough-transfer'
+import type { DoughTransferReport } from '../../../domain/entities/dough-transfer-report'
+import { computeStatus, worstStatus } from '../../../domain/entities/dough-transfer-report'
 
 type RawClosure = {
   id: string
@@ -119,6 +121,53 @@ export class PrismaDoughDayClosureRepository implements IDoughDayClosureReposito
       branchId, from ?? null, to ?? null,
     )
     return rows.map(r => this.toEntity(r))
+  }
+
+  async getReport(opts: ReportOpts): Promise<DoughTransferReport[]> {
+    const rows = await this.db.$queryRawUnsafe<RawClosure[]>(
+      `SELECT * FROM "${this.schema}".dough_day_closures
+       WHERE ($1::text IS NULL OR branch_id = $1)
+         AND ($2::date IS NULL OR closure_date >= $2)
+         AND ($3::date IS NULL OR closure_date <= $3)
+       ORDER BY closure_date DESC, branch_id, dough_type`,
+      opts.branchId ?? null,
+      opts.from ?? null,
+      opts.to ?? null,
+    )
+
+    // Group by (branch_id, closure_date)
+    const grouped = new Map<string, RawClosure[]>()
+    for (const row of rows) {
+      const key = `${row.branch_id}|${row.closure_date.toISOString().slice(0, 10)}`
+      if (!grouped.has(key)) grouped.set(key, [])
+      grouped.get(key)!.push(row)
+    }
+
+    const reports: DoughTransferReport[] = []
+    for (const [key, group] of grouped) {
+      const [branchId, date] = key.split('|')
+      const doughTypes = group.map(row => {
+        const difference = Number(row.difference)
+        return {
+          doughType: row.dough_type as DoughType,
+          initialCount: Number(row.initial_count),
+          soldCount: Number(row.sold_count),
+          wastageCount: Number(row.wastage_count),
+          theoreticalRemaining: Number(row.theoretical_remaining),
+          actualRemaining: Number(row.actual_remaining),
+          difference,
+          status: computeStatus(difference),
+        }
+      })
+      reports.push({
+        branchId,
+        date,
+        doughTypes,
+        overallStatus: worstStatus(doughTypes.map(d => d.status)),
+      })
+    }
+
+    return reports
   }
 
   private toEntity(raw: RawClosure): DoughDayClosure {
