@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { IDishIngredientRepository, AddDishIngredientData, UpdateDishIngredientData } from '../../../domain/repositories/i-dish-ingredient-repository'
-import type { DishIngredient } from '../../../domain/entities/dish-ingredient'
+import type { DishIngredient, DishIngredientWithIngredient } from '../../../domain/entities/dish-ingredient'
 import type { DishIngredientBehavior } from '../../../domain/entities/dish-ingredient'
 
 type RawDishIngredient = {
@@ -10,6 +10,12 @@ type RawDishIngredient = {
   base_quantity: unknown
   behavior: string
   extra_cost: unknown
+}
+
+type RawDishIngredientWithIngredient = RawDishIngredient & {
+  ingredient_name: string
+  consumption_unit: string
+  ingredient_active: boolean
 }
 
 export class PrismaDishIngredientRepository implements IDishIngredientRepository {
@@ -76,6 +82,26 @@ export class PrismaDishIngredientRepository implements IDishIngredientRepository
       `DELETE FROM "${this.schema}".dish_ingredients WHERE id = $1`,
       id,
     )
+  }
+
+  async listByDishWithIngredient(dishId: string): Promise<DishIngredientWithIngredient[]> {
+    const rows = await this.db.$queryRawUnsafe<RawDishIngredientWithIngredient[]>(
+      `SELECT di.id, di.dish_id, di.ingredient_id, di.base_quantity, di.behavior, di.extra_cost,
+              i.name AS ingredient_name, i.consumption_unit, i.active AS ingredient_active
+       FROM "${this.schema}".dish_ingredients di
+       JOIN "${this.schema}".ingredients i ON i.id = di.ingredient_id
+       WHERE di.dish_id = $1
+       ORDER BY di.behavior ASC`,
+      dishId,
+    )
+    return rows.map(r => ({
+      ...this.toEntity(r),
+      ingredient: {
+        name: r.ingredient_name,
+        consumptionUnit: r.consumption_unit,
+        active: r.ingredient_active,
+      },
+    }))
   }
 
   private toEntity(raw: RawDishIngredient): DishIngredient {

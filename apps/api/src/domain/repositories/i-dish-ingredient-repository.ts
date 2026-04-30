@@ -1,4 +1,4 @@
-import type { DishIngredient, DishIngredientBehavior } from '../entities/dish-ingredient'
+import type { DishIngredient, DishIngredientBehavior, DishIngredientWithIngredient } from '../entities/dish-ingredient'
 
 export interface AddDishIngredientData {
   dishId: string
@@ -16,6 +16,7 @@ export interface UpdateDishIngredientData {
 
 export interface IDishIngredientRepository {
   listByDish(dishId: string): Promise<DishIngredient[]>
+  listByDishWithIngredient(dishId: string): Promise<DishIngredientWithIngredient[]>
   findByDishAndIngredient(dishId: string, ingredientId: string): Promise<DishIngredient | null>
   add(data: AddDishIngredientData): Promise<DishIngredient>
   update(id: string, data: UpdateDishIngredientData): Promise<DishIngredient>
