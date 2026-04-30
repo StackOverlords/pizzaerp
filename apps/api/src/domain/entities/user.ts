@@ -10,6 +10,7 @@ export interface User {
   id: string
   username: string
   passwordHash: string
+  pinHash: string | null
   role: UserRole
   tenantId: string
   branchId: string | null

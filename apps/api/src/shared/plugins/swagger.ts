@@ -20,6 +20,7 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
         { name: 'dishes', description: 'Platillos' },
         { name: 'dish-ingredients', description: 'Insumos de platillos' },
         { name: 'combos', description: 'Combos' },
+        { name: 'shifts', description: 'Turnos de caja' },
         { name: 'orders', description: 'Pedidos' },
       ],
       components: {

@@ -14,3 +14,11 @@ export interface DishIngredient {
   behavior: DishIngredientBehavior
   extraCost: number | null
 }
+
+export interface DishIngredientWithIngredient extends DishIngredient {
+  ingredient: {
+    name: string
+    consumptionUnit: string
+    active: boolean
+  }
+}

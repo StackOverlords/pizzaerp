@@ -37,6 +37,14 @@ const dishIngredientResponseSchema = {
     baseQuantity: { type: 'number' },
     behavior: { type: 'string', enum: behaviorEnum },
     extraCost: { type: 'number', nullable: true },
+    ingredient: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        consumptionUnit: { type: 'string' },
+        active: { type: 'boolean' },
+      },
+    },
   },
 }
 
