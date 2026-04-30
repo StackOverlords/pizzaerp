@@ -8,6 +8,7 @@ import { dishIngredientRoutes } from './dish-ingredients'
 import { comboRoutes } from './combos'
 import { shiftRoutes } from './shifts'
 import { orderRoutes } from './orders'
+import { doughTransferRoutes } from './dough-transfers'
 
 export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(healthRoute, { prefix: '/api/v1' })
@@ -19,4 +20,5 @@ export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(comboRoutes, { prefix: '/api/v1/combos' })
   fastify.register(shiftRoutes, { prefix: '/api/v1/shifts' })
   fastify.register(orderRoutes, { prefix: '/api/v1/orders' })
+  fastify.register(doughTransferRoutes, { prefix: '/api/v1/dough-transfers' })
 }
