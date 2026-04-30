@@ -62,6 +62,7 @@ model User {
   id           String   @id @default(cuid())
   username     String
   passwordHash String
+  pinHash      String?
   role         Role
   tenantId     String
   branchId     String?
