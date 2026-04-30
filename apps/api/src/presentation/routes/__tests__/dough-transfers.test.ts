@@ -237,3 +237,147 @@ describe('GET /api/v1/dough-transfers', () => {
     expect(res.statusCode).toBe(401)
   })
 })
+
+// ─── PATCH /api/v1/dough-transfers/:id/receive ────────────────────────────────
+
+describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
+  let transferId: string
+
+  beforeAll(async () => {
+    // Crear un envío fresco para los tests de recepción
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/dough-transfers',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: {
+        toBranchId: destinoBranchId,
+        transferDate: '2026-04-30',
+        items: [
+          { doughType: 'SMALL', quantitySent: 10 },
+          { doughType: 'MEDIUM', quantitySent: 6 },
+        ],
+      },
+    })
+    transferId = res.json().id
+  })
+
+  it('DT-09 — ADMIN destino confirma recepción sin diferencias', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/dough-transfers/${transferId}/receive`,
+      headers: authHeader(adminDestToken),
+      payload: {
+        items: [
+          { doughType: 'SMALL', quantityReceived: 10 },
+          { doughType: 'MEDIUM', quantityReceived: 6 },
+        ],
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.status).toBe('RECEIVED')
+    expect(body.receivedAt).toBeDefined()
+    const smallItem = body.items.find((i: { doughType: string }) => i.doughType === 'SMALL')
+    expect(smallItem.quantityReceived).toBe(10)
+  })
+
+  it('DT-10 — falla si se intenta confirmar un envío ya recibido (400)', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/dough-transfers/${transferId}/receive`,
+      headers: authHeader(adminDestToken),
+      payload: {
+        items: [{ doughType: 'SMALL', quantityReceived: 10 }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('DT-11 — falla si hay diferencia y no se provee observación (400)', async () => {
+    const res2 = await server.inject({
+      method: 'POST',
+      url: '/api/v1/dough-transfers',
+      headers: authHeader(adminToken),
+      payload: {
+        toBranchId: destinoBranchId,
+        transferDate: '2026-04-30',
+        items: [{ doughType: 'LARGE', quantitySent: 8 }],
+      },
+    })
+    const newId = res2.json().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/dough-transfers/${newId}/receive`,
+      headers: authHeader(adminDestToken),
+      payload: {
+        items: [{ doughType: 'LARGE', quantityReceived: 5 }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('DT-12 — con diferencia y observación confirma correctamente', async () => {
+    const res2 = await server.inject({
+      method: 'POST',
+      url: '/api/v1/dough-transfers',
+      headers: authHeader(adminToken),
+      payload: {
+        toBranchId: destinoBranchId,
+        transferDate: '2026-04-30',
+        items: [{ doughType: 'LARGE', quantitySent: 8 }],
+      },
+    })
+    const newId = res2.json().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/dough-transfers/${newId}/receive`,
+      headers: authHeader(adminDestToken),
+      payload: {
+        items: [{ doughType: 'LARGE', quantityReceived: 5 }],
+        notes: 'Se rompieron 3 masas en el transporte',
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.status).toBe('RECEIVED')
+    expect(body.notes).toBe('Se rompieron 3 masas en el transporte')
+  })
+
+  it('DT-13 — sucursal origen no puede confirmar recepción de otro (403)', async () => {
+    const res2 = await server.inject({
+      method: 'POST',
+      url: '/api/v1/dough-transfers',
+      headers: authHeader(adminToken),
+      payload: {
+        toBranchId: destinoBranchId,
+        transferDate: '2026-04-30',
+        items: [{ doughType: 'SMALL', quantitySent: 3 }],
+      },
+    })
+    const newId = res2.json().id
+
+    const res = await server.inject({
+      method: 'PATCH',
+      url: `/api/v1/dough-transfers/${newId}/receive`,
+      headers: authHeader(adminToken),
+      payload: {
+        items: [{ doughType: 'SMALL', quantityReceived: 3 }],
+      },
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('DT-14 — transfer inexistente devuelve 404', async () => {
+    const res = await server.inject({
+      method: 'PATCH',
+      url: '/api/v1/dough-transfers/non-existent/receive',
+      headers: authHeader(adminDestToken),
+      payload: {
+        items: [{ doughType: 'SMALL', quantityReceived: 5 }],
+      },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})

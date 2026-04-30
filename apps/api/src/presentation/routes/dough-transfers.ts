@@ -6,6 +6,7 @@ import { createTenantClient } from '../../infrastructure/database/tenant-client.
 import { PrismaDoughTransferRepository } from '../../infrastructure/database/repositories/prisma-dough-transfer-repository'
 import { createCreateDoughTransferUseCase } from '../../application/dough-transfers/create-dough-transfer.use-case'
 import { createListDoughTransfersUseCase } from '../../application/dough-transfers/list-dough-transfers.use-case'
+import { createReceiveDoughTransferUseCase } from '../../application/dough-transfers/receive-dough-transfer.use-case'
 import { UserRole } from '../../domain/entities/user'
 import { DoughTransferStatus } from '../../domain/entities/dough-transfer'
 import { Errors } from '../../shared/errors/app-error'
@@ -21,6 +22,11 @@ interface ListQuery {
   status?: string
   from?: string
   to?: string
+}
+
+interface ReceiveBody {
+  items: { doughType: string; quantityReceived: number; notes?: string | null }[]
+  notes?: string | null
 }
 
 const itemSchema = {
@@ -104,6 +110,64 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
           items: request.body.items,
         })
         return reply.code(201).send(transfer)
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // PATCH /dough-transfers/:id/receive — confirmar recepción de masas (ADMIN sucursal destino)
+  fastify.patch<{ Params: { id: string }; Body: ReceiveBody }>(
+    '/:id/receive',
+    {
+      schema: {
+        tags: ['dough-transfers'],
+        summary: 'Confirmar recepción de masas',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        body: {
+          type: 'object',
+          required: ['items'],
+          properties: {
+            notes: { type: 'string' },
+            items: {
+              type: 'array',
+              minItems: 1,
+              items: {
+                type: 'object',
+                required: ['doughType', 'quantityReceived'],
+                properties: {
+                  doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+                  quantityReceived: { type: 'integer', minimum: 0 },
+                  notes: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        response: { 200: transferSchema },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate, authorize([UserRole.ADMIN])],
+    },
+    async (request) => {
+      const { tenant_id, branch_id } = request.user
+      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const repo = new PrismaDoughTransferRepository(db, schema)
+        const receiveTransfer = createReceiveDoughTransferUseCase({ doughTransferRepository: repo })
+        return receiveTransfer({
+          transferId: request.params.id,
+          receivingBranchId: branch_id,
+          items: request.body.items,
+          notes: request.body.notes,
+        })
       } finally {
         await db.$disconnect()
       }
