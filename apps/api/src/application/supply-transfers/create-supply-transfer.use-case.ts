@@ -1,9 +1,9 @@
-import type { IDoughTransferRepository, CreateDoughTransferData } from '../../domain/repositories/i-dough-transfer-repository'
-import type { DoughTransferWithItems } from '../../domain/entities/dough-transfer'
+import type { ISupplyTransferRepository, CreateSupplyTransferData } from '../../domain/repositories/i-supply-transfer-repository'
+import type { SupplyTransferWithItems } from '../../domain/entities/supply-transfer'
 import { Errors } from '../../shared/errors/app-error'
 
 interface Dependencies {
-  doughTransferRepository: IDoughTransferRepository
+  supplyTransferRepository: ISupplyTransferRepository
 }
 
 interface CreateDoughTransferInput {
@@ -12,11 +12,11 @@ interface CreateDoughTransferInput {
   sentByUserId: string
   transferDate: string
   notes?: string | null
-  items: { doughType: string; quantitySent: number; notes?: string | null }[]
+  items: { supplyType: string; quantitySent: number; notes?: string | null }[]
 }
 
-export function createCreateDoughTransferUseCase({ doughTransferRepository }: Dependencies) {
-  return async function createDoughTransfer(input: CreateDoughTransferInput): Promise<DoughTransferWithItems> {
+export function createCreateSupplyTransferUseCase({ supplyTransferRepository }: Dependencies) {
+  return async function createSupplyTransfer(input: CreateDoughTransferInput): Promise<SupplyTransferWithItems> {
     if (input.fromBranchId === input.toBranchId) {
       throw Errors.badRequest('La sucursal destino debe ser diferente a la sucursal origen')
     }
@@ -29,19 +29,19 @@ export function createCreateDoughTransferUseCase({ doughTransferRepository }: De
       }
     }
 
-    const data: CreateDoughTransferData = {
+    const data: CreateSupplyTransferData = {
       fromBranchId: input.fromBranchId,
       toBranchId: input.toBranchId,
       sentByUserId: input.sentByUserId,
       transferDate: new Date(input.transferDate),
       notes: input.notes ?? null,
       items: input.items.map(i => ({
-        doughType: i.doughType as CreateDoughTransferData['items'][0]['doughType'],
+        supplyType: i.supplyType as CreateSupplyTransferData['items'][0]['supplyType'],
         quantitySent: i.quantitySent,
         notes: i.notes ?? null,
       })),
     }
 
-    return doughTransferRepository.create(data)
+    return supplyTransferRepository.create(data)
   }
 }

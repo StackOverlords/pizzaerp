@@ -3,14 +3,14 @@ import { authenticate } from '../hooks/authenticate.hook'
 import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
-import { PrismaDoughDayClosureRepository } from '../../infrastructure/database/repositories/prisma-dough-day-closure-repository'
-import { createCloseDoughDayUseCase } from '../../application/dough-closings/close-dough-day.use-case'
+import { PrismaSupplyDayClosureRepository } from '../../infrastructure/database/repositories/prisma-supply-day-closure-repository'
+import { createCloseSupplyDayUseCase } from '../../application/supply-closings/close-supply-day.use-case'
 import { UserRole } from '../../domain/entities/user'
 import { Errors } from '../../shared/errors/app-error'
 
 interface CloseBody {
   closureDate: string
-  doughType: string
+  supplyType: string
   soldCount: number
   actualRemaining: number
   notes?: string | null
@@ -27,7 +27,7 @@ const closureSchema = {
     id: { type: 'string' },
     branchId: { type: 'string' },
     closureDate: { type: 'string' },
-    doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
     initialCount: { type: 'number' },
     soldCount: { type: 'number' },
     wastageCount: { type: 'number' },
@@ -43,13 +43,13 @@ const closureSchema = {
 const summaryItemSchema = {
   type: 'object',
   properties: {
-    doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
     initialCount: { type: 'number' },
     wastageCount: { type: 'number' },
   },
 }
 
-export async function doughClosingRoutes(fastify: FastifyInstance) {
+export async function supplyClosingRoutes(fastify: FastifyInstance) {
   // GET /dough-closings/summary — preview de valores calculados antes de cerrar (ADMIN)
   fastify.get<{ Querystring: { date: string } }>(
     '/summary',
@@ -74,7 +74,7 @@ export async function doughClosingRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughDayClosureRepository(db, schema)
+        const repo = new PrismaSupplyDayClosureRepository(db, schema)
         return repo.getSummary(branch_id, new Date(request.query.date))
       } finally {
         await db.$disconnect()
@@ -91,10 +91,10 @@ export async function doughClosingRoutes(fastify: FastifyInstance) {
         summary: 'Registrar cierre diario de control de masas',
         body: {
           type: 'object',
-          required: ['closureDate', 'doughType', 'soldCount', 'actualRemaining'],
+          required: ['closureDate', 'supplyType', 'soldCount', 'actualRemaining'],
           properties: {
             closureDate: { type: 'string', format: 'date' },
-            doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+            supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
             soldCount: { type: 'integer', minimum: 0 },
             actualRemaining: { type: 'integer', minimum: 0 },
             notes: { type: 'string' },
@@ -112,13 +112,13 @@ export async function doughClosingRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughDayClosureRepository(db, schema)
-        const closeDoughDay = createCloseDoughDayUseCase({ doughDayClosureRepository: repo })
-        const closure = await closeDoughDay({
+        const repo = new PrismaSupplyDayClosureRepository(db, schema)
+        const closeSupplyDay = createCloseSupplyDayUseCase({ supplyDayClosureRepository: repo })
+        const closure = await closeSupplyDay({
           branchId: branch_id,
           closedByUserId: user_id,
           closureDate: request.body.closureDate,
-          doughType: request.body.doughType,
+          supplyType: request.body.supplyType,
           soldCount: request.body.soldCount,
           actualRemaining: request.body.actualRemaining,
           notes: request.body.notes,
@@ -156,7 +156,7 @@ export async function doughClosingRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughDayClosureRepository(db, schema)
+        const repo = new PrismaSupplyDayClosureRepository(db, schema)
         return repo.list(
           branch_id,
           request.query.from ? new Date(request.query.from) : undefined,

@@ -1,27 +1,27 @@
-import type { IDoughWastageRepository } from '../../domain/repositories/i-dough-wastage-repository'
-import type { DoughWastage, WastageReason } from '../../domain/entities/dough-wastage'
-import type { DoughType } from '../../domain/entities/dough-transfer'
+import type { ISupplyWastageRepository } from '../../domain/repositories/i-supply-wastage-repository'
+import type { SupplyWastage, WastageReason } from '../../domain/entities/supply-wastage'
+import type { SupplyType } from '../../domain/entities/supply-transfer'
 import { Errors } from '../../shared/errors/app-error'
 
 const VALID_REASONS = ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER']
 const VALID_DOUGH_TYPES = ['SMALL', 'MEDIUM', 'LARGE']
 
 interface Dependencies {
-  doughWastageRepository: IDoughWastageRepository
+  supplyWastageRepository: ISupplyWastageRepository
 }
 
 interface CreateWastageInput {
   branchId: string
   userId: string
-  doughType: string
+  supplyType: string
   quantity: number
   reason: string
   notes?: string | null
 }
 
-export function createCreateDoughWastageUseCase({ doughWastageRepository }: Dependencies) {
-  return async function createDoughWastage(input: CreateWastageInput): Promise<DoughWastage> {
-    if (!VALID_DOUGH_TYPES.includes(input.doughType)) {
+export function createCreateSupplyWastageUseCase({ supplyWastageRepository }: Dependencies) {
+  return async function createSupplyWastage(input: CreateWastageInput): Promise<SupplyWastage> {
+    if (!VALID_DOUGH_TYPES.includes(input.supplyType)) {
       throw Errors.badRequest(`Tipo de masa inválido. Válidos: ${VALID_DOUGH_TYPES.join(', ')}`)
     }
     if (!VALID_REASONS.includes(input.reason)) {
@@ -34,10 +34,10 @@ export function createCreateDoughWastageUseCase({ doughWastageRepository }: Depe
       throw Errors.badRequest('Se requiere una nota cuando el motivo es "otro"')
     }
 
-    return doughWastageRepository.create({
+    return supplyWastageRepository.create({
       branchId: input.branchId,
       userId: input.userId,
-      doughType: input.doughType as DoughType,
+      supplyType: input.supplyType as SupplyType,
       quantity: input.quantity,
       reason: input.reason as WastageReason,
       notes: input.notes ?? null,

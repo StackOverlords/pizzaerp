@@ -15,7 +15,7 @@ const tenantService = new TenantSchemaService(prisma)
 const TEST = {
   tenantSlug: 'test-reports-tenant',
   tenantSchema: 'tenant_test_reports',
-  closureDate: '2026-04-30',
+  closureDate: '2026-05-02',
 }
 
 let server: FastifyInstance
@@ -103,37 +103,37 @@ beforeAll(async () => {
   // Seed: envío de B → A recibido (initial=10 SMALL)
   const tf = await server.inject({
     method: 'POST',
-    url: '/api/v1/dough-transfers',
+    url: '/api/v1/supply-transfers',
     headers: { Authorization: `Bearer ${adminBToken}` },
     payload: {
       toBranchId: branchAId,
       transferDate: TEST.closureDate,
-      items: [{ doughType: 'SMALL', quantitySent: 10 }],
+      items: [{ supplyType: 'SMALL', quantitySent: 10 }],
     },
   })
   await server.inject({
     method: 'PATCH',
-    url: `/api/v1/dough-transfers/${tf.json().id}/receive`,
+    url: `/api/v1/supply-transfers/${tf.json().id}/receive`,
     headers: { Authorization: `Bearer ${adminAToken}` },
-    payload: { items: [{ doughType: 'SMALL', quantityReceived: 10 }] },
+    payload: { items: [{ supplyType: 'SMALL', quantityReceived: 10 }] },
   })
 
   // Seed: 1 merma SMALL en A
   await server.inject({
     method: 'POST',
-    url: '/api/v1/dough-wastages',
+    url: '/api/v1/supply-wastages',
     headers: { Authorization: `Bearer ${adminAToken}` },
-    payload: { doughType: 'SMALL', quantity: 1, reason: 'FELL' },
+    payload: { supplyType: 'SMALL', quantity: 1, reason: 'FELL' },
   })
 
   // Seed: cierre SMALL en A — diff=0 (GREEN): initial=10, wastage=1, sold=8, actual=1
   await server.inject({
     method: 'POST',
-    url: '/api/v1/dough-closings',
+    url: '/api/v1/supply-closings',
     headers: { Authorization: `Bearer ${adminAToken}` },
     payload: {
       closureDate: TEST.closureDate,
-      doughType: 'SMALL',
+      supplyType: 'SMALL',
       soldCount: 8,
       actualRemaining: 1,
     },
@@ -155,13 +155,13 @@ function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
 
-// ─── GET /api/v1/reports/dough-transfers ──────────────────────────────────────
+// ─── GET /api/v1/reports/supply-transfers ──────────────────────────────────────
 
-describe('GET /api/v1/reports/dough-transfers', () => {
+describe('GET /api/v1/reports/supply-transfers', () => {
   it('RP-01 — ADMIN obtiene el reporte con indicadores por sucursal', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/reports/dough-transfers',
+      url: '/api/v1/reports/supply-transfers',
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
@@ -179,13 +179,13 @@ describe('GET /api/v1/reports/dough-transfers', () => {
   it('RP-02 — diferencia 0 devuelve GREEN', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/reports/dough-transfers',
+      url: '/api/v1/reports/supply-transfers',
       headers: authHeader(adminToken),
     })
     const body = res.json()
     const aReport = body.find((r: { branchId: string }) => r.branchId === branchAId)
     expect(aReport).toBeDefined()
-    const small = aReport.doughTypes.find((d: { doughType: string }) => d.doughType === 'SMALL')
+    const small = aReport.supplyTypes.find((d: { supplyType: string }) => d.supplyType === 'SMALL')
     expect(small.difference).toBe(0)
     expect(small.status).toBe('GREEN')
     expect(aReport.overallStatus).toBe('GREEN')
@@ -194,7 +194,7 @@ describe('GET /api/v1/reports/dough-transfers', () => {
   it('RP-03 — filtro por branchId devuelve solo esa sucursal', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/reports/dough-transfers?branchId=${branchAId}`,
+      url: `/api/v1/reports/supply-transfers?branchId=${branchAId}`,
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
@@ -205,7 +205,7 @@ describe('GET /api/v1/reports/dough-transfers', () => {
   it('RP-04 — filtro por from/to filtra por fecha', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/reports/dough-transfers?from=${TEST.closureDate}&to=${TEST.closureDate}`,
+      url: `/api/v1/reports/supply-transfers?from=${TEST.closureDate}&to=${TEST.closureDate}`,
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
@@ -216,7 +216,7 @@ describe('GET /api/v1/reports/dough-transfers', () => {
   it('RP-05 — CAJERO no puede ver el reporte (403)', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/reports/dough-transfers',
+      url: '/api/v1/reports/supply-transfers',
       headers: authHeader(cajeroToken),
     })
     expect(res.statusCode).toBe(403)
@@ -225,7 +225,7 @@ describe('GET /api/v1/reports/dough-transfers', () => {
   it('RP-06 — sin token devuelve 401', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/reports/dough-transfers',
+      url: '/api/v1/reports/supply-transfers',
     })
     expect(res.statusCode).toBe(401)
   })

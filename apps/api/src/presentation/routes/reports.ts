@@ -3,8 +3,8 @@ import { authenticate } from '../hooks/authenticate.hook'
 import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
-import { PrismaDoughDayClosureRepository } from '../../infrastructure/database/repositories/prisma-dough-day-closure-repository'
-import { createGetDoughTransferReportUseCase } from '../../application/reports/get-dough-transfer-report.use-case'
+import { PrismaSupplyDayClosureRepository } from '../../infrastructure/database/repositories/prisma-supply-day-closure-repository'
+import { createGetSupplyTransferReportUseCase } from '../../application/reports/get-supply-transfer-report.use-case'
 import { UserRole } from '../../domain/entities/user'
 
 interface ReportQuery {
@@ -16,7 +16,7 @@ interface ReportQuery {
 const doughTypeReportSchema = {
   type: 'object',
   properties: {
-    doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
     initialCount: { type: 'number' },
     soldCount: { type: 'number' },
     wastageCount: { type: 'number' },
@@ -32,15 +32,15 @@ const reportSchema = {
   properties: {
     branchId: { type: 'string' },
     date: { type: 'string' },
-    doughTypes: { type: 'array', items: doughTypeReportSchema },
+    supplyTypes: { type: 'array', items: doughTypeReportSchema },
     overallStatus: { type: 'string', enum: ['GREEN', 'YELLOW', 'RED'] },
   },
 }
 
 export async function reportRoutes(fastify: FastifyInstance) {
-  // GET /reports/dough-transfers — reporte de masas por sucursal y día (solo ADMIN)
+  // GET /reports/supply-transfers — reporte de masas por sucursal y día (solo ADMIN)
   fastify.get<{ Querystring: ReportQuery }>(
-    '/dough-transfers',
+    '/supply-transfers',
     {
       schema: {
         tags: ['reports'],
@@ -64,8 +64,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughDayClosureRepository(db, schema)
-        const getReport = createGetDoughTransferReportUseCase({ doughDayClosureRepository: repo })
+        const repo = new PrismaSupplyDayClosureRepository(db, schema)
+        const getReport = createGetSupplyTransferReportUseCase({ supplyDayClosureRepository: repo })
         return getReport({
           branchId: request.query.branchId,
           from: request.query.from ? new Date(request.query.from) : undefined,
