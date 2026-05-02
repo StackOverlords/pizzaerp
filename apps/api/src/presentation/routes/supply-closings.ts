@@ -51,13 +51,13 @@ const summaryItemSchema = {
 }
 
 export async function supplyClosingRoutes(fastify: FastifyInstance) {
-  // GET /dough-closings/summary — preview de valores calculados antes de cerrar (ADMIN)
+  // GET /supply-closings/summary — preview de valores calculados antes de cerrar (ADMIN)
   fastify.get<{ Querystring: { date: string } }>(
     '/summary',
     {
       schema: {
-        tags: ['dough-closings'],
-        summary: 'Preview del cierre de masas: valores calculados automáticamente',
+        tags: ['supply-closings'],
+        summary: 'Preview del cierre de insumos: valores calculados automáticamente',
         querystring: {
           type: 'object',
           required: ['date'],
@@ -83,13 +83,13 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // POST /dough-closings — registrar cierre diario de masas (ADMIN)
+  // POST /supply-closings — registrar cierre diario de insumos (ADMIN)
   fastify.post<{ Body: CloseBody }>(
     '/',
     {
       schema: {
-        tags: ['dough-closings'],
-        summary: 'Registrar cierre diario de control de masas',
+        tags: ['supply-closings'],
+        summary: 'Registrar cierre diario de control de insumos',
         body: {
           type: 'object',
           required: ['closureDate', 'supplyType', 'soldCount', 'actualRemaining'],
@@ -132,13 +132,13 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // GET /dough-closings — historial de cierres (ADMIN)
+  // GET /supply-closings — historial de cierres (ADMIN)
   fastify.get<{ Querystring: ListQuery }>(
     '/',
     {
       schema: {
-        tags: ['dough-closings'],
-        summary: 'Historial de cierres de control de masas',
+        tags: ['supply-closings'],
+        summary: 'Historial de cierres de control de insumos',
         querystring: {
           type: 'object',
           properties: {
