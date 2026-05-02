@@ -238,10 +238,27 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
   )`,
 
   // Migración idempotente para tenants existentes: renombrar tablas y columnas
-  `ALTER TABLE IF EXISTS "${s}".dough_transfers RENAME TO supply_transfers`,
-  `ALTER TABLE IF EXISTS "${s}".dough_transfer_items RENAME TO supply_transfer_items`,
-  `ALTER TABLE IF EXISTS "${s}".dough_wastages RENAME TO supply_wastages`,
-  `ALTER TABLE IF EXISTS "${s}".dough_day_closures RENAME TO supply_day_closures`,
+  // (solo ejecuta si el origen existe y el destino todavía no)
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_transfers')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_transfers')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_transfers RENAME TO supply_transfers'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_transfer_items')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_transfer_items')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_transfer_items RENAME TO supply_transfer_items'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_wastages')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_wastages')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_wastages RENAME TO supply_wastages'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_day_closures')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_day_closures')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_day_closures RENAME TO supply_day_closures'; END IF;
+   END $$`,
   `DO $$ BEGIN
      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='${s}' AND table_name='supply_transfer_items' AND column_name='dough_type') THEN
        EXECUTE 'ALTER TABLE "${s}".supply_transfer_items RENAME COLUMN dough_type TO supply_type';
