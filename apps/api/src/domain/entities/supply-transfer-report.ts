@@ -1,10 +1,8 @@
-import type { SupplyType } from './supply-transfer'
-
 export const StatusIndicator = { GREEN: 'GREEN', YELLOW: 'YELLOW', RED: 'RED' } as const
 export type StatusIndicator = (typeof StatusIndicator)[keyof typeof StatusIndicator]
 
 export interface SupplyTypeReport {
-  supplyType: SupplyType
+  supplyType: string
   initialCount: number
   soldCount: number
   wastageCount: number
@@ -17,7 +15,7 @@ export interface SupplyTypeReport {
 export interface SupplyTransferReport {
   branchId: string
   date: string
-  doughTypes: SupplyTypeReport[]
+  supplyTypes: SupplyTypeReport[]
   overallStatus: StatusIndicator
 }
 

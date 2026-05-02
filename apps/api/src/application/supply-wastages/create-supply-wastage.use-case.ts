@@ -1,13 +1,13 @@
 import type { ISupplyWastageRepository } from '../../domain/repositories/i-supply-wastage-repository'
+import type { ISupplyTypeRepository } from '../../domain/repositories/i-supply-type-repository'
 import type { SupplyWastage, WastageReason } from '../../domain/entities/supply-wastage'
-import type { SupplyType } from '../../domain/entities/supply-transfer'
 import { Errors } from '../../shared/errors/app-error'
 
 const VALID_REASONS = ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER']
-const VALID_DOUGH_TYPES = ['SMALL', 'MEDIUM', 'LARGE']
 
 interface Dependencies {
   supplyWastageRepository: ISupplyWastageRepository
+  supplyTypeRepository: ISupplyTypeRepository
 }
 
 interface CreateWastageInput {
@@ -19,10 +19,11 @@ interface CreateWastageInput {
   notes?: string | null
 }
 
-export function createCreateSupplyWastageUseCase({ supplyWastageRepository }: Dependencies) {
+export function createCreateSupplyWastageUseCase({ supplyWastageRepository, supplyTypeRepository }: Dependencies) {
   return async function createSupplyWastage(input: CreateWastageInput): Promise<SupplyWastage> {
-    if (!VALID_DOUGH_TYPES.includes(input.supplyType)) {
-      throw Errors.badRequest(`Tipo de masa inválido. Válidos: ${VALID_DOUGH_TYPES.join(', ')}`)
+    const supplyType = await supplyTypeRepository.findByName(input.supplyType)
+    if (!supplyType || !supplyType.active) {
+      throw Errors.badRequest(`Tipo de insumo inválido: "${input.supplyType}"`)
     }
     if (!VALID_REASONS.includes(input.reason)) {
       throw Errors.badRequest(`Motivo inválido. Válidos: ${VALID_REASONS.join(', ')}`)
@@ -37,7 +38,7 @@ export function createCreateSupplyWastageUseCase({ supplyWastageRepository }: De
     return supplyWastageRepository.create({
       branchId: input.branchId,
       userId: input.userId,
-      supplyType: input.supplyType as SupplyType,
+      supplyType: input.supplyType,
       quantity: input.quantity,
       reason: input.reason as WastageReason,
       notes: input.notes ?? null,

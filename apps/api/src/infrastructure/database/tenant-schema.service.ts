@@ -186,6 +186,15 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     applied_at    TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
+  // ─── TIPOS DE INSUMO ──────────────────────────────────────────────────────
+
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_types (
+    id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    name       TEXT NOT NULL UNIQUE,
+    active     BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+
   // ─── TRANSFERENCIAS DE INSUMOS ────────────────────────────────────────────
 
   `CREATE TABLE IF NOT EXISTS "${s}".supply_transfers (

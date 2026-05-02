@@ -3,6 +3,7 @@ import { authenticate } from '../hooks/authenticate.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaSupplyWastageRepository } from '../../infrastructure/database/repositories/prisma-supply-wastage-repository'
+import { PrismaSupplyTypeRepository } from '../../infrastructure/database/repositories/prisma-supply-type-repository'
 import { createCreateSupplyWastageUseCase } from '../../application/supply-wastages/create-supply-wastage.use-case'
 import { createListSupplyWastagesUseCase } from '../../application/supply-wastages/list-supply-wastages.use-case'
 import { Errors } from '../../shared/errors/app-error'
@@ -25,7 +26,7 @@ const wastageSchema = {
     id: { type: 'string' },
     branchId: { type: 'string' },
     userId: { type: 'string' },
-    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     quantity: { type: 'number' },
     reason: { type: 'string', enum: ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER'] },
     notes: { type: ['string', 'null'] },
@@ -40,12 +41,12 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ['supply-wastages'],
-        summary: 'Registrar merma de masa',
+        summary: 'Registrar merma de insumo',
         body: {
           type: 'object',
           required: ['supplyType', 'quantity', 'reason'],
           properties: {
-            supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+            supplyType: { type: 'string', minLength: 1 },
             quantity: { type: 'integer', minimum: 1 },
             reason: { type: 'string', enum: ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER'] },
             notes: { type: 'string' },
@@ -63,8 +64,12 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaSupplyWastageRepository(db, schema)
-        const createWastage = createCreateSupplyWastageUseCase({ supplyWastageRepository: repo })
+        const supplyWastageRepo = new PrismaSupplyWastageRepository(db, schema)
+        const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
+        const createWastage = createCreateSupplyWastageUseCase({
+          supplyWastageRepository: supplyWastageRepo,
+          supplyTypeRepository: supplyTypeRepo,
+        })
         const wastage = await createWastage({
           branchId: branch_id,
           userId: user_id,
@@ -86,7 +91,7 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ['supply-wastages'],
-        summary: 'Listar mermas de masa de la sucursal',
+        summary: 'Listar mermas de insumo de la sucursal',
         querystring: {
           type: 'object',
           properties: {

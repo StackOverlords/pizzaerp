@@ -16,7 +16,7 @@ interface ReportQuery {
 const doughTypeReportSchema = {
   type: 'object',
   properties: {
-    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     initialCount: { type: 'number' },
     soldCount: { type: 'number' },
     wastageCount: { type: 'number' },

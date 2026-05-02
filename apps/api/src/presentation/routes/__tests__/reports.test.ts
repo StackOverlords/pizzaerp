@@ -100,6 +100,15 @@ beforeAll(async () => {
     type: 'access',
   } satisfies JwtPayload)
 
+  for (const name of ['SMALL', 'MEDIUM', 'LARGE']) {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/supply-types',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: { name },
+    })
+  }
+
   // Seed: envío de B → A recibido (initial=10 SMALL)
   const tf = await server.inject({
     method: 'POST',

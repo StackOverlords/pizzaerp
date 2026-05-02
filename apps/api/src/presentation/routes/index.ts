@@ -8,6 +8,7 @@ import { dishIngredientRoutes } from './dish-ingredients'
 import { comboRoutes } from './combos'
 import { shiftRoutes } from './shifts'
 import { orderRoutes } from './orders'
+import { supplyTypeRoutes } from './supply-types'
 import { supplyTransferRoutes } from './supply-transfers'
 import { supplyWastageRoutes } from './supply-wastages'
 import { supplyClosingRoutes } from './supply-closings'
@@ -23,6 +24,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(comboRoutes, { prefix: '/api/v1/combos' })
   fastify.register(shiftRoutes, { prefix: '/api/v1/shifts' })
   fastify.register(orderRoutes, { prefix: '/api/v1/orders' })
+  fastify.register(supplyTypeRoutes, { prefix: '/api/v1/supply-types' })
   fastify.register(supplyTransferRoutes, { prefix: '/api/v1/supply-transfers' })
   fastify.register(supplyWastageRoutes, { prefix: '/api/v1/supply-wastages' })
   fastify.register(supplyClosingRoutes, { prefix: '/api/v1/supply-closings' })

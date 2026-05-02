@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { ISupplyTransferRepository, CreateSupplyTransferData, ListSupplyTransfersOpts, ReceiveItemData } from '../../../domain/repositories/i-supply-transfer-repository'
-import type { SupplyTransfer, SupplyTransferItem, SupplyTransferWithItems, SupplyTransferStatus, SupplyType } from '../../../domain/entities/supply-transfer'
+import type { SupplyTransfer, SupplyTransferItem, SupplyTransferWithItems, SupplyTransferStatus } from '../../../domain/entities/supply-transfer'
 
 type RawTransfer = {
   id: string
@@ -170,7 +170,7 @@ export class PrismaSupplyTransferRepository implements ISupplyTransferRepository
     return {
       id: raw.id,
       transferId: raw.transfer_id,
-      supplyType: raw.supply_type as SupplyType,
+      supplyType: raw.supply_type,
       quantitySent: Number(raw.quantity_sent),
       quantityReceived: raw.quantity_received !== null ? Number(raw.quantity_received) : null,
       notes: raw.notes,

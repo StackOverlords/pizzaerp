@@ -1,11 +1,10 @@
 import type { SupplyDayClosure, SupplyClosureSummary } from '../entities/supply-day-closure'
-import type { SupplyType } from '../entities/supply-transfer'
 import type { SupplyTransferReport } from '../entities/supply-transfer-report'
 
 export interface CreateSupplyDayClosureData {
   branchId: string
   closureDate: Date
-  supplyType: SupplyType
+  supplyType: string
   soldCount: number
   actualRemaining: number
   notes: string | null
@@ -20,7 +19,7 @@ export interface ReportOpts {
 
 export interface ISupplyDayClosureRepository {
   create(data: CreateSupplyDayClosureData): Promise<SupplyDayClosure>
-  findByBranchAndDate(branchId: string, closureDate: Date, supplyType: SupplyType): Promise<SupplyDayClosure | null>
+  findByBranchAndDate(branchId: string, closureDate: Date, supplyType: string): Promise<SupplyDayClosure | null>
   list(branchId: string, from?: Date, to?: Date): Promise<SupplyDayClosure[]>
   getSummary(branchId: string, closureDate: Date): Promise<SupplyClosureSummary[]>
   getReport(opts: ReportOpts): Promise<SupplyTransferReport[]>

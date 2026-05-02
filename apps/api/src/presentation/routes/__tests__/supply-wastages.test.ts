@@ -81,6 +81,15 @@ beforeAll(async () => {
     role: UserRole.CAJERO,
     type: 'access',
   } satisfies JwtPayload)
+
+  for (const name of ['SMALL', 'MEDIUM', 'LARGE']) {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/supply-types',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: { name },
+    })
+  }
 })
 
 afterAll(async () => {

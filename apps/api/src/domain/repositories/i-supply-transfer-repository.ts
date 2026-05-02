@@ -1,4 +1,4 @@
-import type { SupplyTransfer, SupplyTransferStatus, SupplyTransferWithItems, SupplyType } from '../entities/supply-transfer'
+import type { SupplyTransfer, SupplyTransferStatus, SupplyTransferWithItems } from '../entities/supply-transfer'
 
 export interface CreateSupplyTransferData {
   fromBranchId: string
@@ -7,7 +7,7 @@ export interface CreateSupplyTransferData {
   transferDate: Date
   notes: string | null
   items: {
-    supplyType: SupplyType
+    supplyType: string
     quantitySent: number
     notes: string | null
   }[]
@@ -21,7 +21,7 @@ export interface ListSupplyTransfersOpts {
 }
 
 export interface ReceiveItemData {
-  supplyType: SupplyType
+  supplyType: string
   quantityReceived: number
   notes: string | null
 }

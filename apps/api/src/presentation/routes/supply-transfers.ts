@@ -4,6 +4,7 @@ import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaSupplyTransferRepository } from '../../infrastructure/database/repositories/prisma-supply-transfer-repository'
+import { PrismaSupplyTypeRepository } from '../../infrastructure/database/repositories/prisma-supply-type-repository'
 import { createCreateSupplyTransferUseCase } from '../../application/supply-transfers/create-supply-transfer.use-case'
 import { createListSupplyTransfersUseCase } from '../../application/supply-transfers/list-supply-transfers.use-case'
 import { createReceiveSupplyTransferUseCase } from '../../application/supply-transfers/receive-supply-transfer.use-case'
@@ -34,7 +35,7 @@ const itemSchema = {
   properties: {
     id: { type: 'string' },
     transferId: { type: 'string' },
-    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     quantitySent: { type: 'number' },
     quantityReceived: { type: ['number', 'null'] },
     notes: { type: ['string', 'null'] },
@@ -79,7 +80,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
                 type: 'object',
                 required: ['supplyType', 'quantitySent'],
                 properties: {
-                  supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+                  supplyType: { type: 'string', minLength: 1 },
                   quantitySent: { type: 'integer', minimum: 1 },
                   notes: { type: 'string' },
                 },
@@ -100,7 +101,8 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaSupplyTransferRepository(db, schema)
-        const createTransfer = createCreateSupplyTransferUseCase({ supplyTransferRepository: repo })
+        const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
+        const createTransfer = createCreateSupplyTransferUseCase({ supplyTransferRepository: repo, supplyTypeRepository: supplyTypeRepo })
         const transfer = await createTransfer({
           fromBranchId: branch_id,
           toBranchId: request.body.toBranchId,
@@ -140,7 +142,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
                 type: 'object',
                 required: ['supplyType', 'quantityReceived'],
                 properties: {
-                  supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+                  supplyType: { type: 'string', minLength: 1 },
                   quantityReceived: { type: 'integer', minimum: 0 },
                   notes: { type: 'string' },
                 },

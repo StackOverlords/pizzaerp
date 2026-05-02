@@ -1,5 +1,5 @@
 import type { ISupplyTransferRepository, ReceiveItemData } from '../../domain/repositories/i-supply-transfer-repository'
-import type { SupplyTransferWithItems, SupplyType } from '../../domain/entities/supply-transfer'
+import type { SupplyTransferWithItems } from '../../domain/entities/supply-transfer'
 import { SupplyTransferStatus } from '../../domain/entities/supply-transfer'
 import { Errors } from '../../shared/errors/app-error'
 
@@ -39,7 +39,7 @@ export function createReceiveSupplyTransferUseCase({ supplyTransferRepository }:
     }
 
     const receiveItems: ReceiveItemData[] = input.items.map(i => ({
-      supplyType: i.supplyType as SupplyType,
+      supplyType: i.supplyType,
       quantityReceived: i.quantityReceived,
       notes: i.notes ?? null,
     }))

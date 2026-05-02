@@ -1,10 +1,8 @@
-import type { SupplyType } from './supply-transfer'
-
 export interface SupplyDayClosure {
   id: string
   branchId: string
   closureDate: Date
-  supplyType: SupplyType
+  supplyType: string
   initialCount: number
   soldCount: number
   wastageCount: number
@@ -17,7 +15,7 @@ export interface SupplyDayClosure {
 }
 
 export interface SupplyClosureSummary {
-  supplyType: SupplyType
+  supplyType: string
   initialCount: number
   wastageCount: number
 }

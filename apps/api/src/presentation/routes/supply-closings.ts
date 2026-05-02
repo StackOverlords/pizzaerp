@@ -4,6 +4,7 @@ import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaSupplyDayClosureRepository } from '../../infrastructure/database/repositories/prisma-supply-day-closure-repository'
+import { PrismaSupplyTypeRepository } from '../../infrastructure/database/repositories/prisma-supply-type-repository'
 import { createCloseSupplyDayUseCase } from '../../application/supply-closings/close-supply-day.use-case'
 import { UserRole } from '../../domain/entities/user'
 import { Errors } from '../../shared/errors/app-error'
@@ -27,7 +28,7 @@ const closureSchema = {
     id: { type: 'string' },
     branchId: { type: 'string' },
     closureDate: { type: 'string' },
-    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     initialCount: { type: 'number' },
     soldCount: { type: 'number' },
     wastageCount: { type: 'number' },
@@ -43,7 +44,7 @@ const closureSchema = {
 const summaryItemSchema = {
   type: 'object',
   properties: {
-    supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     initialCount: { type: 'number' },
     wastageCount: { type: 'number' },
   },
@@ -94,7 +95,7 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
           required: ['closureDate', 'supplyType', 'soldCount', 'actualRemaining'],
           properties: {
             closureDate: { type: 'string', format: 'date' },
-            supplyType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+            supplyType: { type: 'string', minLength: 1 },
             soldCount: { type: 'integer', minimum: 0 },
             actualRemaining: { type: 'integer', minimum: 0 },
             notes: { type: 'string' },
@@ -113,7 +114,8 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaSupplyDayClosureRepository(db, schema)
-        const closeSupplyDay = createCloseSupplyDayUseCase({ supplyDayClosureRepository: repo })
+        const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
+        const closeSupplyDay = createCloseSupplyDayUseCase({ supplyDayClosureRepository: repo, supplyTypeRepository: supplyTypeRepo })
         const closure = await closeSupplyDay({
           branchId: branch_id,
           closedByUserId: user_id,

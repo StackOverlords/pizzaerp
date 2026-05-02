@@ -1,11 +1,10 @@
 import type { SupplyWastage } from '../entities/supply-wastage'
-import type { SupplyType } from '../entities/supply-transfer'
 import type { WastageReason } from '../entities/supply-wastage'
 
 export interface CreateSupplyWastageData {
   branchId: string
   userId: string
-  supplyType: SupplyType
+  supplyType: string
   quantity: number
   reason: WastageReason
   notes: string | null

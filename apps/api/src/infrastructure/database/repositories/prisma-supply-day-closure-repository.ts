@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { ISupplyDayClosureRepository, CreateSupplyDayClosureData, ReportOpts } from '../../../domain/repositories/i-supply-day-closure-repository'
 import type { SupplyDayClosure, SupplyClosureSummary } from '../../../domain/entities/supply-day-closure'
-import type { SupplyType } from '../../../domain/entities/supply-transfer'
 import type { SupplyTransferReport } from '../../../domain/entities/supply-transfer-report'
 import { computeStatus, worstStatus } from '../../../domain/entities/supply-transfer-report'
 
@@ -52,7 +51,7 @@ export class PrismaSupplyDayClosureRepository implements ISupplyDayClosureReposi
     )
 
     return rows.map(r => ({
-      supplyType: r.supply_type as SupplyType,
+      supplyType: r.supply_type,
       initialCount: Number(r.initial_count),
       wastageCount: Number(r.wastage_count),
     }))
@@ -102,7 +101,7 @@ export class PrismaSupplyDayClosureRepository implements ISupplyDayClosureReposi
     return this.toEntity(rows[0])
   }
 
-  async findByBranchAndDate(branchId: string, closureDate: Date, supplyType: SupplyType): Promise<SupplyDayClosure | null> {
+  async findByBranchAndDate(branchId: string, closureDate: Date, supplyType: string): Promise<SupplyDayClosure | null> {
     const rows = await this.db.$queryRawUnsafe<RawClosure[]>(
       `SELECT * FROM "${this.schema}".supply_day_closures
        WHERE branch_id = $1 AND closure_date = $2::date AND supply_type = $3`,
@@ -149,7 +148,7 @@ export class PrismaSupplyDayClosureRepository implements ISupplyDayClosureReposi
       const supplyTypes = group.map(row => {
         const difference = Number(row.difference)
         return {
-          supplyType: row.supply_type as SupplyType,
+          supplyType: row.supply_type,
           initialCount: Number(row.initial_count),
           soldCount: Number(row.sold_count),
           wastageCount: Number(row.wastage_count),
@@ -175,7 +174,7 @@ export class PrismaSupplyDayClosureRepository implements ISupplyDayClosureReposi
       id: raw.id,
       branchId: raw.branch_id,
       closureDate: raw.closure_date,
-      supplyType: raw.supply_type as SupplyType,
+      supplyType: raw.supply_type,
       initialCount: Number(raw.initial_count),
       soldCount: Number(raw.sold_count),
       wastageCount: Number(raw.wastage_count),

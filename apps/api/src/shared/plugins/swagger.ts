@@ -22,6 +22,7 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
         { name: 'combos', description: 'Combos' },
         { name: 'shifts', description: 'Turnos de caja' },
         { name: 'orders', description: 'Pedidos' },
+        { name: 'supply-types', description: 'Tipos de insumo configurables' },
         { name: 'supply-transfers', description: 'Transferencias de insumos' },
         { name: 'supply-wastages', description: 'Mermas de insumos' },
         { name: 'supply-closings', description: 'Cierre diario de control de insumos' },
