@@ -1,10 +1,8 @@
-import type { DoughType } from './dough-transfer'
-
 export const StatusIndicator = { GREEN: 'GREEN', YELLOW: 'YELLOW', RED: 'RED' } as const
 export type StatusIndicator = (typeof StatusIndicator)[keyof typeof StatusIndicator]
 
-export interface DoughTypeReport {
-  doughType: DoughType
+export interface SupplyTypeReport {
+  supplyType: string
   initialCount: number
   soldCount: number
   wastageCount: number
@@ -14,10 +12,10 @@ export interface DoughTypeReport {
   status: StatusIndicator
 }
 
-export interface DoughTransferReport {
+export interface SupplyTransferReport {
   branchId: string
   date: string
-  doughTypes: DoughTypeReport[]
+  supplyTypes: SupplyTypeReport[]
   overallStatus: StatusIndicator
 }
 

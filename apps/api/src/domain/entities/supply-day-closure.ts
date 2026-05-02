@@ -1,10 +1,8 @@
-import type { DoughType } from './dough-transfer'
-
-export interface DoughDayClosure {
+export interface SupplyDayClosure {
   id: string
   branchId: string
   closureDate: Date
-  doughType: DoughType
+  supplyType: string
   initialCount: number
   soldCount: number
   wastageCount: number
@@ -16,8 +14,8 @@ export interface DoughDayClosure {
   closedAt: Date
 }
 
-export interface DoughClosureSummary {
-  doughType: DoughType
+export interface SupplyClosureSummary {
+  supplyType: string
   initialCount: number
   wastageCount: number
 }

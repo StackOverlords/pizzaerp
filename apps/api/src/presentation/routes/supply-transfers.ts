@@ -3,18 +3,19 @@ import { authenticate } from '../hooks/authenticate.hook'
 import { authorize } from '../hooks/authorize.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
-import { PrismaDoughTransferRepository } from '../../infrastructure/database/repositories/prisma-dough-transfer-repository'
-import { createCreateDoughTransferUseCase } from '../../application/dough-transfers/create-dough-transfer.use-case'
-import { createListDoughTransfersUseCase } from '../../application/dough-transfers/list-dough-transfers.use-case'
-import { createReceiveDoughTransferUseCase } from '../../application/dough-transfers/receive-dough-transfer.use-case'
+import { PrismaSupplyTransferRepository } from '../../infrastructure/database/repositories/prisma-supply-transfer-repository'
+import { PrismaSupplyTypeRepository } from '../../infrastructure/database/repositories/prisma-supply-type-repository'
+import { createCreateSupplyTransferUseCase } from '../../application/supply-transfers/create-supply-transfer.use-case'
+import { createListSupplyTransfersUseCase } from '../../application/supply-transfers/list-supply-transfers.use-case'
+import { createReceiveSupplyTransferUseCase } from '../../application/supply-transfers/receive-supply-transfer.use-case'
 import { UserRole } from '../../domain/entities/user'
-import { DoughTransferStatus } from '../../domain/entities/dough-transfer'
+import { SupplyTransferStatus } from '../../domain/entities/supply-transfer'
 import { Errors } from '../../shared/errors/app-error'
 
 interface CreateBody {
   toBranchId: string
   transferDate: string
-  items: { doughType: string; quantitySent: number; notes?: string | null }[]
+  items: { supplyType: string; quantitySent: number; notes?: string | null }[]
   notes?: string | null
 }
 
@@ -25,7 +26,7 @@ interface ListQuery {
 }
 
 interface ReceiveBody {
-  items: { doughType: string; quantityReceived: number; notes?: string | null }[]
+  items: { supplyType: string; quantityReceived: number; notes?: string | null }[]
   notes?: string | null
 }
 
@@ -34,7 +35,7 @@ const itemSchema = {
   properties: {
     id: { type: 'string' },
     transferId: { type: 'string' },
-    doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     quantitySent: { type: 'number' },
     quantityReceived: { type: ['number', 'null'] },
     notes: { type: ['string', 'null'] },
@@ -57,13 +58,13 @@ const transferSchema = {
   },
 }
 
-export async function doughTransferRoutes(fastify: FastifyInstance) {
-  // POST /dough-transfers — registrar envío de masas (solo ADMIN)
+export async function supplyTransferRoutes(fastify: FastifyInstance) {
+  // POST /supply-transfers — registrar envío de masas (solo ADMIN)
   fastify.post<{ Body: CreateBody }>(
     '/',
     {
       schema: {
-        tags: ['dough-transfers'],
+        tags: ['supply-transfers'],
         summary: 'Registrar envío de masas a una sucursal',
         body: {
           type: 'object',
@@ -77,9 +78,9 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
               minItems: 1,
               items: {
                 type: 'object',
-                required: ['doughType', 'quantitySent'],
+                required: ['supplyType', 'quantitySent'],
                 properties: {
-                  doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+                  supplyType: { type: 'string', minLength: 1 },
                   quantitySent: { type: 'integer', minimum: 1 },
                   notes: { type: 'string' },
                 },
@@ -99,8 +100,9 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughTransferRepository(db, schema)
-        const createTransfer = createCreateDoughTransferUseCase({ doughTransferRepository: repo })
+        const repo = new PrismaSupplyTransferRepository(db, schema)
+        const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
+        const createTransfer = createCreateSupplyTransferUseCase({ supplyTransferRepository: repo, supplyTypeRepository: supplyTypeRepo })
         const transfer = await createTransfer({
           fromBranchId: branch_id,
           toBranchId: request.body.toBranchId,
@@ -116,12 +118,12 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // PATCH /dough-transfers/:id/receive — confirmar recepción de masas (ADMIN sucursal destino)
+  // PATCH /supply-transfers/:id/receive — confirmar recepción de masas (ADMIN sucursal destino)
   fastify.patch<{ Params: { id: string }; Body: ReceiveBody }>(
     '/:id/receive',
     {
       schema: {
-        tags: ['dough-transfers'],
+        tags: ['supply-transfers'],
         summary: 'Confirmar recepción de masas',
         params: {
           type: 'object',
@@ -138,9 +140,9 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
               minItems: 1,
               items: {
                 type: 'object',
-                required: ['doughType', 'quantityReceived'],
+                required: ['supplyType', 'quantityReceived'],
                 properties: {
-                  doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+                  supplyType: { type: 'string', minLength: 1 },
                   quantityReceived: { type: 'integer', minimum: 0 },
                   notes: { type: 'string' },
                 },
@@ -160,8 +162,8 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughTransferRepository(db, schema)
-        const receiveTransfer = createReceiveDoughTransferUseCase({ doughTransferRepository: repo })
+        const repo = new PrismaSupplyTransferRepository(db, schema)
+        const receiveTransfer = createReceiveSupplyTransferUseCase({ supplyTransferRepository: repo })
         return receiveTransfer({
           transferId: request.params.id,
           receivingBranchId: branch_id,
@@ -174,12 +176,12 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // GET /dough-transfers — listar envíos de/para la sucursal actual
+  // GET /supply-transfers — listar envíos de/para la sucursal actual
   fastify.get<{ Querystring: ListQuery }>(
     '/',
     {
       schema: {
-        tags: ['dough-transfers'],
+        tags: ['supply-transfers'],
         summary: 'Listar envíos de masas de/para la sucursal actual',
         querystring: {
           type: 'object',
@@ -201,11 +203,11 @@ export async function doughTransferRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughTransferRepository(db, schema)
-        const listTransfers = createListDoughTransfersUseCase({ doughTransferRepository: repo })
+        const repo = new PrismaSupplyTransferRepository(db, schema)
+        const listTransfers = createListSupplyTransfersUseCase({ supplyTransferRepository: repo })
         return listTransfers({
           branchId: branch_id,
-          status: request.query.status as DoughTransferStatus | undefined,
+          status: request.query.status as SupplyTransferStatus | undefined,
           from: request.query.from ? new Date(request.query.from) : undefined,
           to: request.query.to ? new Date(request.query.to) : undefined,
         })

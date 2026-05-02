@@ -7,11 +7,11 @@ export const WastageReason = {
 } as const
 export type WastageReason = (typeof WastageReason)[keyof typeof WastageReason]
 
-export interface DoughWastage {
+export interface SupplyWastage {
   id: string
   branchId: string
   userId: string
-  doughType: string
+  supplyType: string
   quantity: number
   reason: WastageReason
   notes: string | null

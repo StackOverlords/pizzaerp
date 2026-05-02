@@ -2,13 +2,14 @@ import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../hooks/authenticate.hook'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
-import { PrismaDoughWastageRepository } from '../../infrastructure/database/repositories/prisma-dough-wastage-repository'
-import { createCreateDoughWastageUseCase } from '../../application/dough-wastages/create-dough-wastage.use-case'
-import { createListDoughWastagesUseCase } from '../../application/dough-wastages/list-dough-wastages.use-case'
+import { PrismaSupplyWastageRepository } from '../../infrastructure/database/repositories/prisma-supply-wastage-repository'
+import { PrismaSupplyTypeRepository } from '../../infrastructure/database/repositories/prisma-supply-type-repository'
+import { createCreateSupplyWastageUseCase } from '../../application/supply-wastages/create-supply-wastage.use-case'
+import { createListSupplyWastagesUseCase } from '../../application/supply-wastages/list-supply-wastages.use-case'
 import { Errors } from '../../shared/errors/app-error'
 
 interface CreateBody {
-  doughType: string
+  supplyType: string
   quantity: number
   reason: string
   notes?: string | null
@@ -25,7 +26,7 @@ const wastageSchema = {
     id: { type: 'string' },
     branchId: { type: 'string' },
     userId: { type: 'string' },
-    doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+    supplyType: { type: 'string' },
     quantity: { type: 'number' },
     reason: { type: 'string', enum: ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER'] },
     notes: { type: ['string', 'null'] },
@@ -33,19 +34,19 @@ const wastageSchema = {
   },
 }
 
-export async function doughWastageRoutes(fastify: FastifyInstance) {
-  // POST /dough-wastages — registrar merma (ADMIN y CAJERO)
+export async function supplyWastageRoutes(fastify: FastifyInstance) {
+  // POST /supply-wastages — registrar merma (ADMIN y CAJERO)
   fastify.post<{ Body: CreateBody }>(
     '/',
     {
       schema: {
-        tags: ['dough-wastages'],
-        summary: 'Registrar merma de masa',
+        tags: ['supply-wastages'],
+        summary: 'Registrar merma de insumo',
         body: {
           type: 'object',
-          required: ['doughType', 'quantity', 'reason'],
+          required: ['supplyType', 'quantity', 'reason'],
           properties: {
-            doughType: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+            supplyType: { type: 'string', minLength: 1 },
             quantity: { type: 'integer', minimum: 1 },
             reason: { type: 'string', enum: ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER'] },
             notes: { type: 'string' },
@@ -63,12 +64,16 @@ export async function doughWastageRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughWastageRepository(db, schema)
-        const createWastage = createCreateDoughWastageUseCase({ doughWastageRepository: repo })
+        const supplyWastageRepo = new PrismaSupplyWastageRepository(db, schema)
+        const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
+        const createWastage = createCreateSupplyWastageUseCase({
+          supplyWastageRepository: supplyWastageRepo,
+          supplyTypeRepository: supplyTypeRepo,
+        })
         const wastage = await createWastage({
           branchId: branch_id,
           userId: user_id,
-          doughType: request.body.doughType,
+          supplyType: request.body.supplyType,
           quantity: request.body.quantity,
           reason: request.body.reason,
           notes: request.body.notes,
@@ -80,13 +85,13 @@ export async function doughWastageRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // GET /dough-wastages — reporte diario de mermas de la sucursal (ADMIN y CAJERO)
+  // GET /supply-wastages — reporte diario de mermas de la sucursal (ADMIN y CAJERO)
   fastify.get<{ Querystring: ListQuery }>(
     '/',
     {
       schema: {
-        tags: ['dough-wastages'],
-        summary: 'Listar mermas de masa de la sucursal',
+        tags: ['supply-wastages'],
+        summary: 'Listar mermas de insumo de la sucursal',
         querystring: {
           type: 'object',
           properties: {
@@ -106,8 +111,8 @@ export async function doughWastageRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const repo = new PrismaDoughWastageRepository(db, schema)
-        const listWastages = createListDoughWastagesUseCase({ doughWastageRepository: repo })
+        const repo = new PrismaSupplyWastageRepository(db, schema)
+        const listWastages = createListSupplyWastagesUseCase({ supplyWastageRepository: repo })
         return listWastages({
           branchId: branch_id,
           from: request.query.from ? new Date(request.query.from) : undefined,

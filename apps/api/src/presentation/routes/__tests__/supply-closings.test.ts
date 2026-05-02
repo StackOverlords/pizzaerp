@@ -16,7 +16,7 @@ const TEST = {
   tenantSlug: 'test-dough-closings-tenant',
   tenantSchema: 'tenant_test_dough_closings',
   password: 'testpass123',
-  closureDate: '2026-04-30',
+  closureDate: '2026-05-02',
 }
 
 let server: FastifyInstance
@@ -91,10 +91,19 @@ beforeAll(async () => {
     type: 'access',
   } satisfies JwtPayload)
 
+  for (const name of ['SMALL', 'MEDIUM', 'LARGE']) {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/supply-types',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: { name },
+    })
+  }
+
   // Seed: crear envío recibido para tener initial_count
   const transferRes = await server.inject({
     method: 'POST',
-    url: '/api/v1/dough-transfers',
+    url: '/api/v1/supply-transfers',
     headers: { Authorization: `Bearer ${server.jwt.sign({
       user_id: 'admin-closing-source',
       tenant_id: tenantId,
@@ -106,8 +115,8 @@ beforeAll(async () => {
       toBranchId: branchId,
       transferDate: TEST.closureDate,
       items: [
-        { doughType: 'SMALL', quantitySent: 20 },
-        { doughType: 'MEDIUM', quantitySent: 10 },
+        { supplyType: 'SMALL', quantitySent: 20 },
+        { supplyType: 'MEDIUM', quantitySent: 10 },
       ],
     },
   })
@@ -115,12 +124,12 @@ beforeAll(async () => {
 
   await server.inject({
     method: 'PATCH',
-    url: `/api/v1/dough-transfers/${transferId}/receive`,
+    url: `/api/v1/supply-transfers/${transferId}/receive`,
     headers: { Authorization: `Bearer ${adminToken}` },
     payload: {
       items: [
-        { doughType: 'SMALL', quantityReceived: 20 },
-        { doughType: 'MEDIUM', quantityReceived: 10 },
+        { supplyType: 'SMALL', quantityReceived: 20 },
+        { supplyType: 'MEDIUM', quantityReceived: 10 },
       ],
     },
   })
@@ -128,9 +137,9 @@ beforeAll(async () => {
   // Seed: registrar 2 mermas de SMALL
   await server.inject({
     method: 'POST',
-    url: '/api/v1/dough-wastages',
+    url: '/api/v1/supply-wastages',
     headers: { Authorization: `Bearer ${adminToken}` },
-    payload: { doughType: 'SMALL', quantity: 2, reason: 'FELL' },
+    payload: { supplyType: 'SMALL', quantity: 2, reason: 'FELL' },
   })
 })
 
@@ -149,19 +158,19 @@ function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
 
-// ─── GET /api/v1/dough-closings/summary ───────────────────────────────────────
+// ─── GET /api/v1/supply-closings/summary ───────────────────────────────────────
 
-describe('GET /api/v1/dough-closings/summary', () => {
+describe('GET /api/v1/supply-closings/summary', () => {
   it('DC-01 — devuelve initial_count y wastage_count calculados del día', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/dough-closings/summary?date=${TEST.closureDate}`,
+      url: `/api/v1/supply-closings/summary?date=${TEST.closureDate}`,
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(Array.isArray(body)).toBe(true)
-    const small = body.find((s: { doughType: string }) => s.doughType === 'SMALL')
+    const small = body.find((s: { supplyType: string }) => s.supplyType === 'SMALL')
     expect(small.initialCount).toBe(20)
     expect(small.wastageCount).toBe(2)
   })
@@ -169,25 +178,25 @@ describe('GET /api/v1/dough-closings/summary', () => {
   it('DC-02 — CAJERO no puede ver el summary (403)', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/dough-closings/summary?date=${TEST.closureDate}`,
+      url: `/api/v1/supply-closings/summary?date=${TEST.closureDate}`,
       headers: authHeader(cajeroToken),
     })
     expect(res.statusCode).toBe(403)
   })
 })
 
-// ─── POST /api/v1/dough-closings ──────────────────────────────────────────────
+// ─── POST /api/v1/supply-closings ──────────────────────────────────────────────
 
-describe('POST /api/v1/dough-closings', () => {
+describe('POST /api/v1/supply-closings', () => {
   it('DC-03 — ADMIN cierra SMALL sin diferencia', async () => {
     // initial=20, wastage=2, sold=15 → theoretical=3; actual=3 → diff=0
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(adminToken),
       payload: {
         closureDate: TEST.closureDate,
-        doughType: 'SMALL',
+        supplyType: 'SMALL',
         soldCount: 15,
         actualRemaining: 3,
       },
@@ -205,11 +214,11 @@ describe('POST /api/v1/dough-closings', () => {
   it('DC-04 — diferencia sin notas devuelve 400', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(adminToken),
       payload: {
         closureDate: TEST.closureDate,
-        doughType: 'MEDIUM',
+        supplyType: 'MEDIUM',
         soldCount: 8,
         actualRemaining: 1,  // theoretical=2, diff=-1
       },
@@ -220,11 +229,11 @@ describe('POST /api/v1/dough-closings', () => {
   it('DC-05 — diferencia con notas cierra correctamente', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(adminToken),
       payload: {
         closureDate: TEST.closureDate,
-        doughType: 'MEDIUM',
+        supplyType: 'MEDIUM',
         soldCount: 8,
         actualRemaining: 1,
         notes: 'Falta una masa, se revisará con el repartidor',
@@ -239,11 +248,11 @@ describe('POST /api/v1/dough-closings', () => {
   it('DC-06 — no puede cerrar el mismo tipo dos veces (409)', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(adminToken),
       payload: {
         closureDate: TEST.closureDate,
-        doughType: 'SMALL',
+        supplyType: 'SMALL',
         soldCount: 15,
         actualRemaining: 3,
       },
@@ -254,11 +263,11 @@ describe('POST /api/v1/dough-closings', () => {
   it('DC-07 — CAJERO no puede cerrar (403)', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(cajeroToken),
       payload: {
         closureDate: TEST.closureDate,
-        doughType: 'LARGE',
+        supplyType: 'LARGE',
         soldCount: 0,
         actualRemaining: 0,
       },
@@ -267,13 +276,13 @@ describe('POST /api/v1/dough-closings', () => {
   })
 })
 
-// ─── GET /api/v1/dough-closings ───────────────────────────────────────────────
+// ─── GET /api/v1/supply-closings ───────────────────────────────────────────────
 
-describe('GET /api/v1/dough-closings', () => {
+describe('GET /api/v1/supply-closings', () => {
   it('DC-08 — lista historial de cierres de la sucursal', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
@@ -286,7 +295,7 @@ describe('GET /api/v1/dough-closings', () => {
   it('DC-09 — sin token devuelve 401', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/dough-closings',
+      url: '/api/v1/supply-closings',
     })
     expect(res.statusCode).toBe(401)
   })

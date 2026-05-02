@@ -13,7 +13,7 @@ const prisma = new PrismaClient()
 const tenantService = new TenantSchemaService(prisma)
 
 const TEST = {
-  tenantSlug: 'test-dough-transfers-tenant',
+  tenantSlug: 'test-supply-transfers-tenant',
   tenantSchema: 'tenant_test_dough_transfers',
   password: 'testpass123',
 }
@@ -35,9 +35,9 @@ beforeAll(async () => {
   const passwordHash = await bcrypt.hash(TEST.password, 12)
 
   const plan = await prisma.plan.upsert({
-    where: { name: '_test-plan-dough-transfers' },
+    where: { name: '_test-plan-supply-transfers' },
     update: {},
-    create: { name: '_test-plan-dough-transfers' },
+    create: { name: '_test-plan-supply-transfers' },
   })
 
   const tenant = await prisma.tenant.upsert({
@@ -98,6 +98,15 @@ beforeAll(async () => {
     role: UserRole.CAJERO,
     type: 'access',
   } satisfies JwtPayload)
+
+  for (const name of ['SMALL', 'MEDIUM', 'LARGE']) {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/supply-types',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: { name },
+    })
+  }
 })
 
 afterAll(async () => {
@@ -106,7 +115,7 @@ afterAll(async () => {
   await prisma.branch.deleteMany({ where: { tenantId } })
   await prisma.subscription.deleteMany({ where: { tenantId } })
   await prisma.tenant.delete({ where: { slug: TEST.tenantSlug } })
-  await prisma.plan.deleteMany({ where: { name: '_test-plan-dough-transfers' } })
+  await prisma.plan.deleteMany({ where: { name: '_test-plan-supply-transfers' } })
   await prisma.$disconnect()
   await server.close()
 })
@@ -115,20 +124,20 @@ function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
 
-// ─── POST /api/v1/dough-transfers ─────────────────────────────────────────────
+// ─── POST /api/v1/supply-transfers ─────────────────────────────────────────────
 
-describe('POST /api/v1/dough-transfers', () => {
+describe('POST /api/v1/supply-transfers', () => {
   it('DT-01 — ADMIN crea envío correctamente', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
         items: [
-          { doughType: 'SMALL', quantitySent: 10 },
-          { doughType: 'LARGE', quantitySent: 5 },
+          { supplyType: 'SMALL', quantitySent: 10 },
+          { supplyType: 'LARGE', quantitySent: 5 },
         ],
       },
     })
@@ -146,12 +155,12 @@ describe('POST /api/v1/dough-transfers', () => {
   it('DT-02 — falla si toBranchId es la misma sucursal origen', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: centralBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'SMALL', quantitySent: 5 }],
+        items: [{ supplyType: 'SMALL', quantitySent: 5 }],
       },
     })
     expect(res.statusCode).toBe(400)
@@ -160,7 +169,7 @@ describe('POST /api/v1/dough-transfers', () => {
   it('DT-03 — falla si items está vacío', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: destinoBranchId,
@@ -174,12 +183,12 @@ describe('POST /api/v1/dough-transfers', () => {
   it('DT-04 — CAJERO no puede crear envíos (403)', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(cajeroToken),
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'MEDIUM', quantitySent: 3 }],
+        items: [{ supplyType: 'MEDIUM', quantitySent: 3 }],
       },
     })
     expect(res.statusCode).toBe(403)
@@ -188,24 +197,24 @@ describe('POST /api/v1/dough-transfers', () => {
   it('DT-05 — sin token devuelve 401', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'SMALL', quantitySent: 5 }],
+        items: [{ supplyType: 'SMALL', quantitySent: 5 }],
       },
     })
     expect(res.statusCode).toBe(401)
   })
 })
 
-// ─── GET /api/v1/dough-transfers ──────────────────────────────────────────────
+// ─── GET /api/v1/supply-transfers ──────────────────────────────────────────────
 
-describe('GET /api/v1/dough-transfers', () => {
+describe('GET /api/v1/supply-transfers', () => {
   it('DT-06 — sucursal destino ve envíos IN_TRANSIT dirigidos a ella', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/dough-transfers?status=IN_TRANSIT',
+      url: '/api/v1/supply-transfers?status=IN_TRANSIT',
       headers: authHeader(adminDestToken),
     })
     expect(res.statusCode).toBe(200)
@@ -219,7 +228,7 @@ describe('GET /api/v1/dough-transfers', () => {
   it('DT-07 — sucursal origen ve sus envíos salientes', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
     })
     expect(res.statusCode).toBe(200)
@@ -232,29 +241,29 @@ describe('GET /api/v1/dough-transfers', () => {
   it('DT-08 — sin token devuelve 401', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
     })
     expect(res.statusCode).toBe(401)
   })
 })
 
-// ─── PATCH /api/v1/dough-transfers/:id/receive ────────────────────────────────
+// ─── PATCH /api/v1/supply-transfers/:id/receive ────────────────────────────────
 
-describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
+describe('PATCH /api/v1/supply-transfers/:id/receive', () => {
   let transferId: string
 
   beforeAll(async () => {
     // Crear un envío fresco para los tests de recepción
     const res = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: { Authorization: `Bearer ${adminToken}` },
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
         items: [
-          { doughType: 'SMALL', quantitySent: 10 },
-          { doughType: 'MEDIUM', quantitySent: 6 },
+          { supplyType: 'SMALL', quantitySent: 10 },
+          { supplyType: 'MEDIUM', quantitySent: 6 },
         ],
       },
     })
@@ -264,12 +273,12 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
   it('DT-09 — ADMIN destino confirma recepción sin diferencias', async () => {
     const res = await server.inject({
       method: 'PATCH',
-      url: `/api/v1/dough-transfers/${transferId}/receive`,
+      url: `/api/v1/supply-transfers/${transferId}/receive`,
       headers: authHeader(adminDestToken),
       payload: {
         items: [
-          { doughType: 'SMALL', quantityReceived: 10 },
-          { doughType: 'MEDIUM', quantityReceived: 6 },
+          { supplyType: 'SMALL', quantityReceived: 10 },
+          { supplyType: 'MEDIUM', quantityReceived: 6 },
         ],
       },
     })
@@ -277,17 +286,17 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
     const body = res.json()
     expect(body.status).toBe('RECEIVED')
     expect(body.receivedAt).toBeDefined()
-    const smallItem = body.items.find((i: { doughType: string }) => i.doughType === 'SMALL')
+    const smallItem = body.items.find((i: { supplyType: string }) => i.supplyType === 'SMALL')
     expect(smallItem.quantityReceived).toBe(10)
   })
 
   it('DT-10 — falla si se intenta confirmar un envío ya recibido (400)', async () => {
     const res = await server.inject({
       method: 'PATCH',
-      url: `/api/v1/dough-transfers/${transferId}/receive`,
+      url: `/api/v1/supply-transfers/${transferId}/receive`,
       headers: authHeader(adminDestToken),
       payload: {
-        items: [{ doughType: 'SMALL', quantityReceived: 10 }],
+        items: [{ supplyType: 'SMALL', quantityReceived: 10 }],
       },
     })
     expect(res.statusCode).toBe(400)
@@ -296,22 +305,22 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
   it('DT-11 — falla si hay diferencia y no se provee observación (400)', async () => {
     const res2 = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'LARGE', quantitySent: 8 }],
+        items: [{ supplyType: 'LARGE', quantitySent: 8 }],
       },
     })
     const newId = res2.json().id
 
     const res = await server.inject({
       method: 'PATCH',
-      url: `/api/v1/dough-transfers/${newId}/receive`,
+      url: `/api/v1/supply-transfers/${newId}/receive`,
       headers: authHeader(adminDestToken),
       payload: {
-        items: [{ doughType: 'LARGE', quantityReceived: 5 }],
+        items: [{ supplyType: 'LARGE', quantityReceived: 5 }],
       },
     })
     expect(res.statusCode).toBe(400)
@@ -320,22 +329,22 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
   it('DT-12 — con diferencia y observación confirma correctamente', async () => {
     const res2 = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'LARGE', quantitySent: 8 }],
+        items: [{ supplyType: 'LARGE', quantitySent: 8 }],
       },
     })
     const newId = res2.json().id
 
     const res = await server.inject({
       method: 'PATCH',
-      url: `/api/v1/dough-transfers/${newId}/receive`,
+      url: `/api/v1/supply-transfers/${newId}/receive`,
       headers: authHeader(adminDestToken),
       payload: {
-        items: [{ doughType: 'LARGE', quantityReceived: 5 }],
+        items: [{ supplyType: 'LARGE', quantityReceived: 5 }],
         notes: 'Se rompieron 3 masas en el transporte',
       },
     })
@@ -348,22 +357,22 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
   it('DT-13 — sucursal origen no puede confirmar recepción de otro (403)', async () => {
     const res2 = await server.inject({
       method: 'POST',
-      url: '/api/v1/dough-transfers',
+      url: '/api/v1/supply-transfers',
       headers: authHeader(adminToken),
       payload: {
         toBranchId: destinoBranchId,
         transferDate: '2026-04-30',
-        items: [{ doughType: 'SMALL', quantitySent: 3 }],
+        items: [{ supplyType: 'SMALL', quantitySent: 3 }],
       },
     })
     const newId = res2.json().id
 
     const res = await server.inject({
       method: 'PATCH',
-      url: `/api/v1/dough-transfers/${newId}/receive`,
+      url: `/api/v1/supply-transfers/${newId}/receive`,
       headers: authHeader(adminToken),
       payload: {
-        items: [{ doughType: 'SMALL', quantityReceived: 3 }],
+        items: [{ supplyType: 'SMALL', quantityReceived: 3 }],
       },
     })
     expect(res.statusCode).toBe(403)
@@ -372,10 +381,10 @@ describe('PATCH /api/v1/dough-transfers/:id/receive', () => {
   it('DT-14 — transfer inexistente devuelve 404', async () => {
     const res = await server.inject({
       method: 'PATCH',
-      url: '/api/v1/dough-transfers/non-existent/receive',
+      url: '/api/v1/supply-transfers/non-existent/receive',
       headers: authHeader(adminDestToken),
       payload: {
-        items: [{ doughType: 'SMALL', quantityReceived: 5 }],
+        items: [{ supplyType: 'SMALL', quantityReceived: 5 }],
       },
     })
     expect(res.statusCode).toBe(404)

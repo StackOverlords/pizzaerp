@@ -186,9 +186,18 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     applied_at    TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
-  // ─── TRANSFERENCIAS ───────────────────────────────────────────────────────
+  // ─── TIPOS DE INSUMO ──────────────────────────────────────────────────────
 
-  `CREATE TABLE IF NOT EXISTS "${s}".dough_transfers (
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_types (
+    id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    name       TEXT NOT NULL UNIQUE,
+    active     BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+
+  // ─── TRANSFERENCIAS DE INSUMOS ────────────────────────────────────────────
+
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_transfers (
     id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     from_branch_id  TEXT NOT NULL,
     to_branch_id    TEXT NOT NULL,
@@ -200,31 +209,31 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     received_at     TIMESTAMPTZ
   )`,
 
-  `CREATE TABLE IF NOT EXISTS "${s}".dough_transfer_items (
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_transfer_items (
     id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    transfer_id       TEXT NOT NULL REFERENCES "${s}".dough_transfers(id),
-    dough_type        TEXT NOT NULL CHECK (dough_type IN ('SMALL', 'MEDIUM', 'LARGE')),
+    transfer_id       TEXT NOT NULL REFERENCES "${s}".supply_transfers(id),
+    supply_type       TEXT NOT NULL,
     quantity_sent     INT NOT NULL,
     quantity_received INT,
     notes             TEXT
   )`,
 
-  `CREATE TABLE IF NOT EXISTS "${s}".dough_wastages (
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_wastages (
     id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     branch_id   TEXT NOT NULL,
     user_id     TEXT NOT NULL,
-    dough_type  TEXT NOT NULL CHECK (dough_type IN ('SMALL', 'MEDIUM', 'LARGE')),
+    supply_type TEXT NOT NULL,
     quantity    INT NOT NULL,
     reason      TEXT NOT NULL,
     notes       TEXT,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
-  `CREATE TABLE IF NOT EXISTS "${s}".dough_day_closures (
+  `CREATE TABLE IF NOT EXISTS "${s}".supply_day_closures (
     id                    TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     branch_id             TEXT NOT NULL,
     closure_date          DATE NOT NULL,
-    dough_type            TEXT NOT NULL CHECK (dough_type IN ('SMALL', 'MEDIUM', 'LARGE')),
+    supply_type           TEXT NOT NULL,
     initial_count         INT NOT NULL,
     sold_count            INT NOT NULL,
     wastage_count         INT NOT NULL,
@@ -234,8 +243,46 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     notes                 TEXT,
     closed_by_user_id     TEXT NOT NULL,
     closed_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (branch_id, closure_date, dough_type)
+    UNIQUE (branch_id, closure_date, supply_type)
   )`,
+
+  // Migración idempotente para tenants existentes: renombrar tablas y columnas
+  // (solo ejecuta si el origen existe y el destino todavía no)
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_transfers')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_transfers')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_transfers RENAME TO supply_transfers'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_transfer_items')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_transfer_items')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_transfer_items RENAME TO supply_transfer_items'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_wastages')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_wastages')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_wastages RENAME TO supply_wastages'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='dough_day_closures')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='${s}' AND table_name='supply_day_closures')
+     THEN EXECUTE 'ALTER TABLE "${s}".dough_day_closures RENAME TO supply_day_closures'; END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='${s}' AND table_name='supply_transfer_items' AND column_name='dough_type') THEN
+       EXECUTE 'ALTER TABLE "${s}".supply_transfer_items RENAME COLUMN dough_type TO supply_type';
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='${s}' AND table_name='supply_wastages' AND column_name='dough_type') THEN
+       EXECUTE 'ALTER TABLE "${s}".supply_wastages RENAME COLUMN dough_type TO supply_type';
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='${s}' AND table_name='supply_day_closures' AND column_name='dough_type') THEN
+       EXECUTE 'ALTER TABLE "${s}".supply_day_closures RENAME COLUMN dough_type TO supply_type';
+     END IF;
+   END $$`,
 ]
 
 export class TenantSchemaService {
