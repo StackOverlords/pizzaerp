@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     env: {
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/pizzaerp',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/fooderp',
     },
   },
 })
