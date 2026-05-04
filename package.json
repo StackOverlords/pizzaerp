@@ -1,10 +1,10 @@
 {
-  "name": "pizzaerp",
+  "name": "fooderp",
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "desktop": "pnpm --filter @pizzaerp/desktop dev",
-    "api": "pnpm --filter @pizzaerp/api dev",
+    "desktop": "pnpm --filter @fooderp/desktop dev",
+    "api": "pnpm --filter @fooderp/api dev",
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "build": "pnpm --recursive build",
     "typecheck": "pnpm --recursive typecheck"

@@ -1,6 +1,6 @@
 {
-  "name": "@pizzaerp/desktop",
-  "productName": "PizzaERP",
+  "name": "@fooderp/desktop",
+  "productName": "FoodERP",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".vite/build/main.cjs",
