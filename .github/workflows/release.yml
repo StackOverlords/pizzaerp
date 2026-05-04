@@ -60,7 +60,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "deploy/*"
-          target: "/home/olivio/pizzaerp-api"
+          target: "/home/olivio/fooderp-api"
           strip_components: 1
 
       - name: Install, migrate & restart
@@ -71,11 +71,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd /home/olivio/pizzaerp-api
+            cd /home/olivio/fooderp-api
             npm install
             npx prisma generate
             npx prisma migrate deploy
-            pm2 describe pizzaerp-api > /dev/null 2>&1 \
-              && pm2 restart pizzaerp-api \
-              || pm2 start dist/index.js --name pizzaerp-api
+            pm2 describe fooderp-api > /dev/null 2>&1 \
+              && pm2 restart fooderp-api \
+              || pm2 start dist/index.js --name fooderp-api
             pm2 save

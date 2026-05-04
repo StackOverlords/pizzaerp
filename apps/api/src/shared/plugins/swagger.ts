@@ -8,8 +8,8 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: 'PizzaERP API',
-        description: 'Sistema de gestión para pizzerías',
+        title: 'FoodERP API',
+        description: 'Sistema de gestión para negocios de comida',
         version: process.env.npm_package_version ?? '0.0.1',
       },
       tags: [
