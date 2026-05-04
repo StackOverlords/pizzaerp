@@ -16,7 +16,7 @@ const TEST = {
   tenantSlug: 'test-dough-closings-tenant',
   tenantSchema: 'tenant_test_dough_closings',
   password: 'testpass123',
-  closureDate: '2026-05-02',
+  closureDate: new Date().toISOString().split('T')[0],
 }
 
 let server: FastifyInstance

@@ -15,7 +15,7 @@ const tenantService = new TenantSchemaService(prisma)
 const TEST = {
   tenantSlug: 'test-reports-tenant',
   tenantSchema: 'tenant_test_reports',
-  closureDate: '2026-05-02',
+  closureDate: new Date().toISOString().split('T')[0],
 }
 
 let server: FastifyInstance
