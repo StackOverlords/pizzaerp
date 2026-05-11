@@ -5,7 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     env: {
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/fooderp',
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/fooderp',
+      SUPER_ADMIN_KEY: 'dev-super-admin-key-change-in-production',
     },
   },
 })

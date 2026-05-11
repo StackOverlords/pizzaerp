@@ -23,6 +23,7 @@ let server: FastifyInstance
 let tenantId: string
 let branchId: string
 let userId: string
+let planId: string
 
 beforeAll(async () => {
   process.env.JWT_SECRET ??= 'vitest-jwt-secret-at-least-32-chars-long'
@@ -40,9 +41,10 @@ beforeAll(async () => {
 
   const plan = await prisma.plan.upsert({
     where: { name: '_test-plan-auth' },
-    update: {},
-    create: { name: '_test-plan-auth' },
+    update: { maxBranches: 3, maxUsers: 10 },
+    create: { name: '_test-plan-auth', maxBranches: 3, maxUsers: 10 },
   })
+  planId = plan.id
 
   const tenant = await prisma.tenant.upsert({
     where: { slug: TEST.tenantSlug },
@@ -88,7 +90,7 @@ async function login() {
   const res = await server.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { username: TEST.username, password: TEST.password, tenantId },
+    payload: { username: TEST.username, password: TEST.password, slug: TEST.tenantSlug },
   })
   return res.json<{ access_token: string; refresh_token: string }>()
 }
@@ -100,7 +102,7 @@ describe('POST /api/v1/auth/login', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: { username: TEST.username, password: TEST.password, tenantId },
+      payload: { username: TEST.username, password: TEST.password, slug: TEST.tenantSlug },
     })
 
     expect(res.statusCode).toBe(200)
@@ -156,11 +158,11 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.statusCode).toBe(401)
   })
 
-  it('devuelve 401 para tenantId incorrecto', async () => {
+  it('devuelve 401 para slug inexistente', async () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: { username: TEST.username, password: TEST.password, tenantId: 'wrong-tenant' },
+      payload: { username: TEST.username, password: TEST.password, slug: 'slug-que-no-existe' },
     })
 
     expect(res.statusCode).toBe(401)
@@ -309,5 +311,110 @@ describe('authorize hook (CA-04)', () => {
     })
 
     expect(res.statusCode).toBe(403)
+  })
+})
+
+// ─── GET /auth/me ─────────────────────────────────────────────────────────────
+
+describe('GET /api/v1/auth/me', () => {
+  it('devuelve el perfil del usuario autenticado', async () => {
+    const { access_token } = await login()
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json<{ id: string; username: string; role: string; branchId: string; tenantId: string }>()
+    expect(body.id).toBe(userId)
+    expect(body.username).toBe(TEST.username)
+    expect(body.role).toBe(UserRole.ADMIN)
+    expect(body.branchId).toBe(branchId)
+    expect(body.tenantId).toBe(tenantId)
+  })
+
+  it('devuelve 401 sin token', async () => {
+    const res = await server.inject({ method: 'GET', url: '/api/v1/auth/me' })
+    expect(res.statusCode).toBe(401)
+  })
+})
+
+// ─── POST /auth/login — tenant status ────────────────────────────────────────
+
+describe('POST /api/v1/auth/login — validación de tenant.status', () => {
+  it('devuelve 401 si el tenant está SUSPENDED', async () => {
+    const t = await prisma.tenant.create({
+      data: {
+        name: 'Suspended Tenant', slug: 'test-suspended-auth',
+        schema: 'tenant_test_suspended', status: 'SUSPENDED',
+        subscription: { create: { planId, status: 'ACTIVE' } },
+      },
+    })
+    try {
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { username: TEST.username, password: TEST.password, slug: 'test-suspended-auth' },
+      })
+      expect(res.statusCode).toBe(401)
+    } finally {
+      await prisma.subscription.deleteMany({ where: { tenantId: t.id } })
+      await prisma.tenant.delete({ where: { id: t.id } })
+    }
+  })
+
+  it('devuelve 401 si el tenant está CANCELED', async () => {
+    const t = await prisma.tenant.create({
+      data: {
+        name: 'Canceled Tenant', slug: 'test-canceled-auth',
+        schema: 'tenant_test_canceled', status: 'CANCELED',
+        subscription: { create: { planId, status: 'ACTIVE' } },
+      },
+    })
+    try {
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { username: TEST.username, password: TEST.password, slug: 'test-canceled-auth' },
+      })
+      expect(res.statusCode).toBe(401)
+    } finally {
+      await prisma.subscription.deleteMany({ where: { tenantId: t.id } })
+      await prisma.tenant.delete({ where: { id: t.id } })
+    }
+  })
+})
+
+// ─── GET /auth/subscription ───────────────────────────────────────────────────
+
+describe('GET /api/v1/auth/subscription', () => {
+  it('devuelve plan y uso actual del tenant', async () => {
+    const { access_token } = await login()
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/auth/subscription',
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json<{
+      planName: string; maxBranches: number; maxUsers: number
+      currentBranches: number; currentUsers: number
+      subscriptionStatus: string; trialEndsAt: string | null
+    }>()
+    expect(body.planName).toBe('_test-plan-auth')
+    expect(body.maxBranches).toBe(3)
+    expect(body.maxUsers).toBe(10)
+    expect(typeof body.currentBranches).toBe('number')
+    expect(typeof body.currentUsers).toBe('number')
+    expect(body.subscriptionStatus).toBe('ACTIVE')
+  })
+
+  it('devuelve 401 sin token', async () => {
+    const res = await server.inject({ method: 'GET', url: '/api/v1/auth/subscription' })
+    expect(res.statusCode).toBe(401)
   })
 })
