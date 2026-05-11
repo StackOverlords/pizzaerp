@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     env: {
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/saaserp',
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/saaserp',
       SUPER_ADMIN_KEY: 'dev-super-admin-key-change-in-production',
     },
   },
