@@ -26,8 +26,22 @@ export class PrismaUserRepository implements IUserRepository {
     return this.db.user.findMany({ where: { id: { in: ids } }, select: { id: true, username: true } })
   }
 
+  async findAllByTenant(tenantId: string): Promise<User[]> {
+    const users = await this.db.user.findMany({ where: { tenantId }, orderBy: { createdAt: 'asc' } })
+    return users.map(u => this.toEntity(u))
+  }
+
   async updatePin(userId: string, pinHash: string): Promise<void> {
     await this.db.user.update({ where: { id: userId }, data: { pinHash } })
+  }
+
+  async updateRoleAndBranch(id: string, data: { role?: UserRole; branchId?: string | null }): Promise<User> {
+    const user = await this.db.user.update({ where: { id }, data })
+    return this.toEntity(user)
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.db.user.delete({ where: { id } })
   }
 
   private toEntity(raw: {

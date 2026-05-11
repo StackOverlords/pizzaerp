@@ -13,6 +13,9 @@ export async function createServer(): Promise<FastifyInstance> {
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
     },
+    ajv: {
+      customOptions: { strict: false },
+    },
   })
 
   await server.register(corsPlugin)

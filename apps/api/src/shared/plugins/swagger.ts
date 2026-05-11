@@ -15,6 +15,8 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
       tags: [
         { name: 'health', description: 'Health check' },
         { name: 'auth', description: 'Autenticación' },
+        { name: 'branches', description: 'Sucursales del tenant' },
+        { name: 'users', description: 'Usuarios del tenant (gestión interna)' },
         { name: 'ingredients', description: 'Insumos' },
         { name: 'categories', description: 'Categorías' },
         { name: 'dishes', description: 'Platillos' },
@@ -27,6 +29,8 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
         { name: 'supply-wastages', description: 'Mermas de insumos' },
         { name: 'supply-closings', description: 'Cierre diario de control de insumos' },
         { name: 'reports', description: 'Reportes (dueña)' },
+        { name: 'setup', description: 'Configuración inicial (Client-VPS)' },
+        { name: 'admin', description: '⚙️ Super-admin — gestión de tenants (solo operador FoodERP). Requiere header X-Admin-Key.' },
       ],
       components: {
         securitySchemes: {
@@ -34,6 +38,12 @@ export const swaggerPlugin = fp(async function swaggerPlugin(fastify: FastifyIns
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
+          },
+          adminApiKey: {
+            type: 'apiKey',
+            in: 'header',
+            name: 'X-Admin-Key',
+            description: 'Clave secreta del operador FoodERP. Configurada en la variable de entorno SUPER_ADMIN_KEY.',
           },
         },
       },

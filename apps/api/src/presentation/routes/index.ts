@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { healthRoute } from './health'
 import { authRoutes } from './auth'
+import { setupRoutes } from './setup'
+import { adminRoutes } from './admin'
+import { branchRoutes } from './branches'
+import { userRoutes } from './users'
 import { ingredientRoutes } from './ingredients'
 import { categoryRoutes } from './categories'
 import { dishRoutes } from './dishes'
@@ -17,6 +21,10 @@ import { reportRoutes } from './reports'
 export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(healthRoute, { prefix: '/api/v1' })
   fastify.register(authRoutes, { prefix: '/api/v1/auth' })
+  fastify.register(setupRoutes, { prefix: '/api/v1/setup' })
+  fastify.register(adminRoutes, { prefix: '/api/v1/admin' })
+  fastify.register(branchRoutes, { prefix: '/api/v1/branches' })
+  fastify.register(userRoutes, { prefix: '/api/v1/users' })
   fastify.register(ingredientRoutes, { prefix: '/api/v1/ingredients' })
   fastify.register(categoryRoutes, { prefix: '/api/v1/categories' })
   fastify.register(dishRoutes, { prefix: '/api/v1/dishes' })

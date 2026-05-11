@@ -1,16 +1,17 @@
 import type { FastifyInstance } from 'fastify'
-import { loginUseCase, userRepository } from '../../shared/container'
+import { loginUseCase, userRepository, tenantRepository } from '../../shared/container'
 import { Errors } from '../../shared/errors/app-error'
 import type { JwtPayload } from '../plugins/jwt.plugin'
 import { authenticate } from '../hooks/authenticate.hook'
 import { authorize } from '../hooks/authorize.hook'
 import { UserRole } from '../../domain/entities/user'
+import { TenantStatus } from '../../domain/entities/tenant'
 import { createSetPinUseCase } from '../../application/auth/set-pin.use-case'
 
 interface LoginBody {
   username: string
   password: string
-  tenantId: string
+  slug?: string
 }
 
 interface RefreshBody {
@@ -26,11 +27,11 @@ export async function authRoutes(fastify: FastifyInstance) {
         summary: 'Iniciar sesión',
         body: {
           type: 'object',
-          required: ['username', 'password', 'tenantId'],
+          required: ['username', 'password'],
           properties: {
-            username: { type: 'string', minLength: 1 },
-            password: { type: 'string', minLength: 1 },
-            tenantId: { type: 'string', minLength: 1 },
+            username: { type: 'string', minLength: 1, example: 'admin' },
+            password: { type: 'string', minLength: 1, example: 'secreto123' },
+            slug: { type: 'string', minLength: 1, maxLength: 60, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', description: 'Solo SaaS. Omitir en Client-VPS.', example: 'maxpizza' },
           },
         },
         response: {
@@ -45,8 +46,26 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { username, password, tenantId } = request.body
-      const user = await loginUseCase(username, password, tenantId)
+      const { username, password, slug } = request.body
+
+      let tenant: Awaited<ReturnType<typeof tenantRepository.findBySlug>>
+
+      if (slug) {
+        tenant = await tenantRepository.findBySlug(slug)
+      } else {
+        // Client-VPS mode: auto-resolve when there is exactly one tenant
+        const count = await tenantRepository.count()
+        if (count !== 1) throw Errors.unauthorized('Invalid credentials')
+        tenant = await tenantRepository.findFirst()
+      }
+
+      if (!tenant) throw Errors.unauthorized('Invalid credentials')
+
+      if (tenant.status === TenantStatus.SUSPENDED || tenant.status === TenantStatus.CANCELED) {
+        throw Errors.unauthorized('Invalid credentials')
+      }
+
+      const user = await loginUseCase(username, password, tenant.id)
 
       const payload: JwtPayload = {
         user_id: user.id,
@@ -110,6 +129,68 @@ export async function authRoutes(fastify: FastifyInstance) {
       } satisfies JwtPayload)
 
       return reply.send({ access_token })
+    },
+  )
+
+  // GET /auth/me — perfil del usuario autenticado
+  fastify.get(
+    '/me',
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Perfil del usuario autenticado',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              username: { type: 'string' },
+              role: { type: 'string' },
+              branchId: { type: 'string', nullable: true },
+              tenantId: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const user = await userRepository.findById(request.user.user_id)
+      if (!user) throw Errors.unauthorized('User not found')
+      return { id: user.id, username: user.username, role: user.role, branchId: user.branchId, tenantId: user.tenantId }
+    },
+  )
+
+  // GET /auth/subscription — plan y uso actual del tenant
+  fastify.get(
+    '/subscription',
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Suscripción y uso del plan del tenant',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              planName: { type: 'string', nullable: true },
+              maxBranches: { type: 'integer', nullable: true },
+              maxUsers: { type: 'integer', nullable: true },
+              currentBranches: { type: 'integer' },
+              currentUsers: { type: 'integer' },
+              subscriptionStatus: { type: 'string' },
+              trialEndsAt: { type: 'string', format: 'date-time', nullable: true },
+            },
+          },
+        },
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const info = await tenantRepository.getSubscriptionInfo(request.user.tenant_id)
+      if (!info) throw Errors.notFound('Subscription not found')
+      return info
     },
   )
 
