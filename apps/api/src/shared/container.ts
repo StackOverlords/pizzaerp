@@ -4,6 +4,7 @@ import { PrismaTenantRepository } from '../infrastructure/database/repositories/
 import { PrismaBranchRepository } from '../infrastructure/database/repositories/prisma-branch-repository'
 import { TenantSchemaService } from '../infrastructure/database/tenant-schema.service'
 import { bcryptService } from '../infrastructure/auth/bcrypt.service'
+import { createGetAppConfigUseCase } from '../application/config/get-app-config.use-case'
 import { createLoginUseCase } from '../application/auth/login.use-case'
 import { createSetupTenantUseCase } from '../application/tenants/setup-tenant.use-case'
 import { createCreateAdminTenantUseCase } from '../application/admin/create-admin-tenant.use-case'
@@ -25,6 +26,11 @@ export const branchRepository = new PrismaBranchRepository(prisma)
 export const tenantSchemaService = new TenantSchemaService(prisma)
 
 // Use cases
+export const getAppConfigUseCase = createGetAppConfigUseCase({
+  tenantRepository,
+  getMode: () => (process.env.SUPER_ADMIN_KEY ? 'saas' : 'client-vps'),
+})
+
 export const loginUseCase = createLoginUseCase({
   userRepository,
   comparePassword: bcryptService.compare,

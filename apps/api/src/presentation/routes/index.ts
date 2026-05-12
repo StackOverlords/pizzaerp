@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { healthRoute } from './health'
 import { authRoutes } from './auth'
+import { configRoutes } from './config'
 import { setupRoutes } from './setup'
 import { adminRoutes } from './admin'
 import { branchRoutes } from './branches'
@@ -21,6 +22,7 @@ import { reportRoutes } from './reports'
 export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(healthRoute, { prefix: '/api/v1' })
   fastify.register(authRoutes, { prefix: '/api/v1/auth' })
+  fastify.register(configRoutes, { prefix: '/api/v1/config' })
   fastify.register(setupRoutes, { prefix: '/api/v1/setup' })
   fastify.register(adminRoutes, { prefix: '/api/v1/admin' })
   fastify.register(branchRoutes, { prefix: '/api/v1/branches' })
