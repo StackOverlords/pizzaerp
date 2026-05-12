@@ -1,4 +1,5 @@
 import type { User } from '@/core/auth/types'
+import { ROLE_PERMISSIONS } from '@/core/auth/role-permissions'
 import type { RouteConfig } from './types'
 
 export function canAccess(route: RouteConfig, user: User | null): boolean {
@@ -6,8 +7,14 @@ export function canAccess(route: RouteConfig, user: User | null): boolean {
   if (!hasRestrictions) return true
   if (!user) return false
 
-  if (route.roles?.length && route.roles.some((r) => user.roles.includes(r))) return true
-  if (route.permissions?.length && route.permissions.every((p) => user.permissions.includes(p))) return true
+  if (route.roles?.length && route.roles.includes(user.role)) return true
+  if (
+    route.permissions?.length &&
+    route.permissions.every((p) =>
+      (ROLE_PERMISSIONS[user.role] as readonly string[]).includes(p),
+    )
+  )
+    return true
 
   return false
 }

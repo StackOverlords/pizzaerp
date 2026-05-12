@@ -11,6 +11,8 @@ import {
 import type { RouteConfig } from '@/core/routing/types'
 import { RouteRegistry } from '@/core/routing/route-registry'
 
+const SetupPage = lazy(() => import('@/pages/Setup'))
+
 const Placeholder = ({ label }: { label: string }) => (
   <div className="p-6 text-foreground text-sm text-muted-foreground">{label}</div>
 )
@@ -110,6 +112,15 @@ export const routes: RouteConfig[] = [
     order: 99,
     showInSidebar: false,
     tabConfig: { singleton: true },
+  },
+  {
+    id: 'setup',
+    path: '/setup',
+    label: 'Configuración inicial',
+    element: <SetupPage />,
+    component: SetupPage,
+    order: 100,
+    showInSidebar: false,
   },
 ]
 

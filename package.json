@@ -7,7 +7,8 @@
     "api": "pnpm --filter @fooderp/api dev",
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "build": "pnpm --recursive build",
-    "typecheck": "pnpm --recursive typecheck"
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

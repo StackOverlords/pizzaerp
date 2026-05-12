@@ -10,12 +10,9 @@ export function AccountSection() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
-  const initials = user?.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
+  const initials = (user?.username ?? '?')
+    .slice(0, 2)
     .toUpperCase()
-    .slice(0, 2) ?? '?'
 
   return (
     <div className="space-y-6">
@@ -33,20 +30,17 @@ export function AccountSection() {
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{user?.name ?? '—'}</p>
-          <p className="text-xs text-muted-foreground truncate">{user?.email ?? '—'}</p>
+          <p className="text-sm font-medium truncate">{user?.username ?? '—'}</p>
         </div>
       </div>
 
-      {user?.roles && user.roles.length > 0 && (
+      {user?.role && (
         <>
           <Separator />
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">{t('settings.account.roles')}</Label>
+            <p className="text-xs font-medium text-muted-foreground">{t('settings.account.roles')}</p>
             <div className="flex flex-wrap gap-1.5">
-              {user.roles.map((role) => (
-                <Badge key={role} variant="secondary">{role}</Badge>
-              ))}
+              <Badge variant="secondary">{user.role}</Badge>
             </div>
           </div>
         </>
@@ -61,6 +55,3 @@ export function AccountSection() {
   )
 }
 
-function Label({ className, ...props }: React.ComponentProps<'p'>) {
-  return <p className={`text-sm font-medium ${className ?? ''}`} {...props} />
-}

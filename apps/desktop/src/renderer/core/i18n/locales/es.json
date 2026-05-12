@@ -56,6 +56,34 @@
     "closeToRight": "Cerrar a la derecha",
     "openTabs": "Pestañas abiertas ({{count}})"
   },
+  "auth": {
+    "login": {
+      "tagline": "Iniciá sesión para continuar",
+      "username": "Usuario",
+      "password": "Contraseña",
+      "slug": "Slug del negocio",
+      "submit": "Ingresar",
+      "submitting": "Ingresando…",
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña",
+      "error": "Error al iniciar sesión"
+    }
+  },
+  "setup": {
+    "title": "Configuración inicial",
+    "description": "Completá los datos para poner en marcha tu negocio"
+  },
+  "boot": {
+    "connection": {
+      "title": "Sin conexión al servidor",
+      "description": "No se pudo conectar al servidor. Verificá que el backend esté corriendo e intentá de nuevo.",
+      "retry": "Reintentar"
+    },
+    "misconfigured": {
+      "title": "Sistema mal configurado",
+      "description": "El sistema está en modo SaaS pero no tiene ningún tenant configurado. Contactá al soporte técnico."
+    }
+  },
   "sidebar": {
     "settings": "Configuración"
   },

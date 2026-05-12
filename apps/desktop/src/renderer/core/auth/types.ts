@@ -1,10 +1,17 @@
+export const UserRole = {
+  ADMIN: 'ADMIN',
+  CAJERO: 'CAJERO',
+  HORNERO: 'HORNERO',
+} as const
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
 export interface User {
   id: string
-  email: string
-  name: string
-  roles: string[]
-  permissions: string[]
-  avatar?: string
+  username: string
+  role: UserRole
+  tenantId: string
+  branchId: string | null
 }
 
 export interface AuthState {

@@ -4,6 +4,7 @@ import './index.css'
 import App from './App'
 import { registerDefaultCommands } from '@/core/commands/default-commands'
 import { registerSettingsCommands } from '@/features/settings'
+import { registerSetupCommands } from '@/features/setup'
 import { registerDefaultKeybindings } from '@/core/keybindings'
 import { initI18n } from '@/core/i18n'
 import { storage } from '@/lib/storage/adapter'
@@ -15,6 +16,7 @@ async function bootstrap() {
 
   registerDefaultCommands()
   registerSettingsCommands()
+  registerSetupCommands()
   registerDefaultKeybindings()
 
   createRoot(document.getElementById('root')!).render(

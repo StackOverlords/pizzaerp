@@ -56,6 +56,34 @@
     "closeToRight": "Close to the right",
     "openTabs": "Open tabs ({{count}})"
   },
+  "auth": {
+    "login": {
+      "tagline": "Sign in to continue",
+      "username": "Username",
+      "password": "Password",
+      "slug": "Business slug",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "error": "Error signing in"
+    }
+  },
+  "setup": {
+    "title": "Initial setup",
+    "description": "Complete the details to get your business up and running"
+  },
+  "boot": {
+    "connection": {
+      "title": "Cannot connect to server",
+      "description": "Could not connect to the server. Make sure the backend is running and try again.",
+      "retry": "Retry"
+    },
+    "misconfigured": {
+      "title": "System misconfigured",
+      "description": "The system is in SaaS mode but has no tenant configured. Contact technical support."
+    }
+  },
   "sidebar": {
     "settings": "Settings"
   },

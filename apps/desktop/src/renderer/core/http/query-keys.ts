@@ -3,6 +3,10 @@ export const queryKeys = {
     me: () => ['auth', 'me'] as const,
   },
 
+  config: {
+    current: () => ['config'] as const,
+  },
+
   orders: {
     all:    () => ['orders'] as const,
     lists:  () => ['orders', 'list'] as const,

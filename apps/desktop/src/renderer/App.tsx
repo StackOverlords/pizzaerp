@@ -20,6 +20,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { useKeybindingBridge } from '@/core/keybindings'
 import { TabContent, useTabStore, useTabsSettingsStore } from '@/core/tabs'
 import { useAppearanceStore } from '@/core/appearance/appearance-store'
+import { BootGate } from '@/components/boot/BootGate'
 
 function RouterBinder() {
   const navigate = useNavigate()
@@ -49,7 +50,6 @@ function InitialTab() {
 }
 
 function Shell() {
-  const { isDark } = useTheme()
   const sidebarWidth = useSidebarWidthStore((s) => s.width)
   const fontSize = useAppearanceStore((s) => s.fontSize)
   useKeybindingBridge()
@@ -89,7 +89,6 @@ function Shell() {
           </ErrorBoundary>
         </SidebarInset>
       </SidebarProvider>
-      <Toaster position="bottom-right" theme={isDark ? 'dark' : 'light'} richColors />
       <ConfirmDialog />
       <PromptDialog />
     </div>
@@ -97,12 +96,16 @@ function Shell() {
 }
 
 export default function App() {
+  const { isDark } = useTheme()
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/']}>
-        <Shell />
-        <CommandPalette />
-      </MemoryRouter>
+      <Toaster position="bottom-right" theme={isDark ? 'dark' : 'light'} richColors />
+      <BootGate>
+        <MemoryRouter initialEntries={['/']}>
+          <Shell />
+          <CommandPalette />
+        </MemoryRouter>
+      </BootGate>
     </QueryClientProvider>
   )
 }

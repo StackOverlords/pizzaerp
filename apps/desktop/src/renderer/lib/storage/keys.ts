@@ -11,4 +11,7 @@ export const StorageKeys = {
   keybindings: 'app:keybindings',
   tabs: 'app:tabs',
   tabsSettings: 'app:tabs-settings',
+  auth: {
+    tenantSlug: 'auth:tenant-slug',
+  },
 } as const
