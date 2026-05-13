@@ -1,5 +1,10 @@
 import type { PrismaClient } from '@prisma/client'
-import type { IOrderRepository, CreateOrderData } from '../../../domain/repositories/i-order-repository'
+import type {
+  IOrderRepository,
+  CreateOrderData,
+  ListOrdersFilters,
+  OrderListResult,
+} from '../../../domain/repositories/i-order-repository'
 import type { Order, OrderItem, OrderWithItems } from '../../../domain/entities/order'
 import type { OrderStatus } from '../../../domain/entities/order'
 
@@ -156,6 +161,56 @@ export class PrismaOrderRepository implements IOrderRepository {
     return {
       ...this.toOrderEntity(orderRows[0]),
       items: itemRows.map(r => this.toItemEntity(r)),
+    }
+  }
+
+  async findMany(filters: ListOrdersFilters): Promise<OrderListResult> {
+    const SORT_COLUMNS: Record<ListOrdersFilters['sortBy'], string> = {
+      createdAt: 'created_at',
+      orderNumber: 'order_number',
+      total: 'total',
+    }
+    const SORT_DIRECTIONS: Record<ListOrdersFilters['sortOrder'], 'ASC' | 'DESC'> = {
+      asc: 'ASC',
+      desc: 'DESC',
+    }
+
+    const column = SORT_COLUMNS[filters.sortBy]
+    const direction = SORT_DIRECTIONS[filters.sortOrder]
+    const offset = (filters.page - 1) * filters.limit
+
+    type RawRowWithCount = RawOrder & { total_count: bigint }
+
+    const rows = await this.db.$queryRawUnsafe<RawRowWithCount[]>(
+      `SELECT id, order_number, shift_id, branch_id, user_id, status,
+              subtotal, discount_amount, total, notes, created_at, updated_at,
+              COUNT(*) OVER() AS total_count
+       FROM "${this.schema}".orders
+       WHERE branch_id = $1
+         AND ($2::text IS NULL OR shift_id = $2)
+         AND ($3::text IS NULL OR status   = $3)
+         AND ($4::text IS NULL OR user_id  = $4)
+         AND ($5::date IS NULL OR created_at::date >= $5::date)
+         AND ($6::date IS NULL OR created_at::date <= $6::date)
+       ORDER BY ${column} ${direction}
+       LIMIT $7 OFFSET $8`,
+      filters.branchId,
+      filters.shiftId ?? null,
+      filters.status ?? null,
+      filters.userId ?? null,
+      filters.from ?? null,
+      filters.to ?? null,
+      filters.limit,
+      offset,
+    )
+
+    const total = rows[0] ? Number(rows[0].total_count) : 0
+
+    return {
+      data: rows.map(r => this.toOrderEntity(r)),
+      total,
+      page: filters.page,
+      limit: filters.limit,
     }
   }
 

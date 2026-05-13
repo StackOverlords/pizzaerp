@@ -551,3 +551,304 @@ describe('PATCH /api/v1/orders/:id/discount', () => {
     expect(res.statusCode).toBe(404)
   })
 })
+
+// ─── GET /orders ──────────────────────────────────────────────────────────────
+
+describe('GET /api/v1/orders', () => {
+  // IDs de las órdenes sembradas para estos tests
+  let olOrderIds: string[] = []
+  let olShiftId2: string
+  let branch2Id: string
+  let admin2Id: string
+
+  beforeAll(async () => {
+    // Crear segunda sucursal para tests de admin cross-branch
+    const branch2 = await prisma.branch.upsert({
+      where: { id: 'branch-orders-test-002' },
+      update: {},
+      create: { id: 'branch-orders-test-002', name: 'Branch Test Orders 2', tenantId },
+    })
+    branch2Id = branch2.id
+
+    // Crear admin con acceso a todo el tenant (sin branch fija en JWT)
+    const admin2 = await prisma.user.upsert({
+      where: { username_tenantId: { username: 'orders-admin2', tenantId } },
+      update: {},
+      create: {
+        username: 'orders-admin2',
+        passwordHash: 'x',
+        role: 'ADMIN',
+        tenantId,
+        branchId: null,
+      },
+    })
+    admin2Id = admin2.id
+
+    // Abrir turno 2 en la sucursal principal (para test de filtro por shiftId)
+    const shift2Rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".shifts (branch_id, user_id, initial_cash)
+       VALUES ($1, $2, 0)
+       RETURNING id`,
+      branchId,
+      cajeroUserId,
+    )
+    olShiftId2 = shift2Rows[0].id
+
+    // Seed: 3 PENDING en turno principal (shiftId), 2 PAID, 1 CANCELLED
+    //       1 PENDING en turno 2 (olShiftId2)
+    //       1 PENDING en branch2 (para test de admin cross-branch)
+
+    const orderPayloads = [
+      // turno 1, branch1 — PENDING x3
+      { shiftId, status: 'PENDING', note: 'ol-01' },
+      { shiftId, status: 'PENDING', note: 'ol-02' },
+      { shiftId, status: 'PENDING', note: 'ol-03' },
+      // turno 1, branch1 — PAID x2
+      { shiftId, status: 'PAID', note: 'ol-04' },
+      { shiftId, status: 'PAID', note: 'ol-05' },
+      // turno 1, branch1 — CANCELLED x1
+      { shiftId, status: 'CANCELLED', note: 'ol-06' },
+      // turno 2, branch1 — PENDING x1
+      { shiftId: olShiftId2, status: 'PENDING', note: 'ol-07' },
+    ]
+
+    for (const o of orderPayloads) {
+      const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO "${TEST.tenantSchema}".orders
+           (order_number, shift_id, branch_id, user_id, subtotal, discount_amount, total, status, notes)
+         VALUES (
+           (SELECT COALESCE(MAX(order_number),0)+1 FROM "${TEST.tenantSchema}".orders WHERE branch_id = $1 AND created_at::date = CURRENT_DATE),
+           $2, $1, $3, 55.00, 0, 55.00, $4, $5
+         )
+         RETURNING id`,
+        branchId,
+        o.shiftId,
+        cajeroUserId,
+        o.status,
+        o.note,
+      )
+      olOrderIds.push(rows[0].id)
+    }
+
+    // 1 orden en branch2 (para test OL-09 admin cross-branch)
+    // branch2 necesita su propio turno
+    const branch2ShiftRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".shifts (branch_id, user_id, initial_cash)
+       VALUES ($1, $2, 0)
+       RETURNING id`,
+      branch2Id,
+      cajeroUserId,
+    )
+    const branch2ShiftId = branch2ShiftRows[0].id
+
+    const branch2OrderRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".orders
+         (order_number, shift_id, branch_id, user_id, subtotal, discount_amount, total, status, notes)
+       VALUES (1, $1, $2, $3, 75.00, 0, 75.00, 'PENDING', 'branch2-order')
+       RETURNING id`,
+      branch2ShiftId,
+      branch2Id,
+      cajeroUserId,
+    )
+    olOrderIds.push(branch2OrderRows[0].id)
+  })
+
+  afterAll(async () => {
+    // Cleanup de branch2 (branch1 y sus datos son limpiados en el afterAll global)
+    await prisma.branch.deleteMany({ where: { id: branch2Id } })
+    await prisma.user.deleteMany({ where: { id: admin2Id } })
+  })
+
+  it('OL-01 — CAJERO sin filtros → 200, data array con órdenes de su branch', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(Array.isArray(body.data)).toBe(true)
+    expect(body.page).toBe(1)
+    expect(body.limit).toBe(20)
+    expect(typeof body.total).toBe('number')
+    // Todas las órdenes deben ser de la branch del cajero
+    for (const order of body.data) {
+      expect(order.branchId).toBe(branchId)
+    }
+    // No debe contener la orden de branch2
+    const ids = body.data.map((o: { id: string }) => o.id)
+    expect(ids).not.toContain(olOrderIds[olOrderIds.length - 1])
+  })
+
+  it('OL-02 — CAJERO pasa ?branchId=otro → 403', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?branchId=${branch2Id}`,
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('OL-03 — CAJERO pasa ?userId=alguien → 403', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?userId=${cajeroUserId}`,
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('OL-04 — CAJERO ?status=PAID → solo órdenes pagadas', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?status=PAID',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+    for (const order of body.data) {
+      expect(order.status).toBe('PAID')
+    }
+  })
+
+  it('OL-05 — CAJERO ?shiftId={olShiftId2} → solo órdenes de ese turno', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?shiftId=${olShiftId2}`,
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+    for (const order of body.data) {
+      expect(order.shiftId).toBe(olShiftId2)
+    }
+  })
+
+  it('OL-06 — Paginación: page=1&limit=2 y page=2&limit=2 → sin duplicados', async () => {
+    const res1 = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?page=1&limit=2',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res1.statusCode).toBe(200)
+    const body1 = res1.json()
+    expect(body1.data).toHaveLength(2)
+    expect(body1.page).toBe(1)
+    expect(body1.limit).toBe(2)
+
+    const res2 = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?page=2&limit=2',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res2.statusCode).toBe(200)
+    const body2 = res2.json()
+    expect(body2.data).toHaveLength(2)
+    expect(body2.page).toBe(2)
+
+    const ids1 = body1.data.map((o: { id: string }) => o.id)
+    const ids2 = body2.data.map((o: { id: string }) => o.id)
+    const overlap = ids1.filter((id: string) => ids2.includes(id))
+    expect(overlap).toHaveLength(0)
+  })
+
+  it('OL-07 — Sort: ?sortBy=orderNumber&sortOrder=asc → orden ascendente', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?sortBy=orderNumber&sortOrder=asc',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    const numbers: number[] = body.data.map((o: { orderNumber: number }) => o.orderNumber)
+    for (let i = 1; i < numbers.length; i++) {
+      expect(numbers[i]).toBeGreaterThanOrEqual(numbers[i - 1])
+    }
+  })
+
+  it('OL-08 — ADMIN ?userId={cajeroId} → solo órdenes de ese usuario', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?userId=${cajeroUserId}`,
+      headers: authHeader(adminToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+    for (const order of body.data) {
+      expect(order.userId).toBe(cajeroUserId)
+    }
+  })
+
+  it('OL-09 — ADMIN ?branchId={branch2Id} → solo órdenes de esa sucursal', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?branchId=${branch2Id}`,
+      headers: authHeader(adminToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+    for (const order of body.data) {
+      expect(order.branchId).toBe(branch2Id)
+    }
+  })
+
+  it('OL-10 — Sin token → 401', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders',
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('OL-11 — ?from=hoy&to=hoy → datos no vacíos', async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders?from=${today}&to=${today}`,
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+  })
+
+  it('OL-12 — ?sortBy=invalido → 400', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?sortBy=invalido',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OL-13 — ?from=2030-05-15&to=2030-05-10 (from > to) → 400', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?from=2030-05-15&to=2030-05-10',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OL-14 — ?limit=101 → 400', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?limit=101',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('OL-15 — ?page=0 → 400', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/orders?page=0',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(400)
+  })
+})
