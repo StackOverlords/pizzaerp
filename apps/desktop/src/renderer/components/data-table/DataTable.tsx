@@ -565,7 +565,7 @@ export function DataTable<T extends object>({
     if (oldIdx !== -1 && newIdx !== -1) setColumnOrder(arrayMove(order, oldIdx, newIdx))
   }
 
-  function handleDragEnd(_: DragEndEvent) {
+  function handleDragEnd() {
     // columnOrder already updated in real-time via handleDragOver
   }
 
