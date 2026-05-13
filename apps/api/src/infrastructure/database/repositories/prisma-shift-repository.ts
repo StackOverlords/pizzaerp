@@ -88,10 +88,11 @@ export class PrismaShiftRepository implements IShiftRepository {
     }
   }
 
-  async findClosed(branchId: string, opts: FindClosedOpts): Promise<{ data: ShiftWithClosure[]; total: number }> {
+  async findClosed(branchId: string | null, opts: FindClosedOpts): Promise<{ data: ShiftWithClosure[]; total: number }> {
     const offset = (opts.page - 1) * opts.limit
-    const from = opts.from ?? null
-    const to = opts.to ?? null
+    const from   = opts.from   ?? null
+    const to     = opts.to     ?? null
+    const userId = opts.userId ?? null
 
     type RawRow = RawShift & {
       closure_id: string | null
@@ -120,21 +121,25 @@ export class PrismaShiftRepository implements IShiftRepository {
               sc.closed_at       AS closure_closed_at
        FROM "${this.schema}".shifts s
        LEFT JOIN "${this.schema}".shift_closures sc ON sc.shift_id = s.id
-       WHERE s.branch_id = $1 AND s.status = 'CLOSED'
+       WHERE s.status = 'CLOSED'
+         AND ($1::text IS NULL OR s.branch_id = $1::text)
          AND ($2::timestamptz IS NULL OR s.closed_at >= $2)
          AND ($3::timestamptz IS NULL OR s.closed_at <= $3)
+         AND ($4::text IS NULL OR s.user_id = $4::text)
        ORDER BY s.opened_at DESC
-       LIMIT $4 OFFSET $5`,
-      branchId, from, to, opts.limit, offset,
+       LIMIT $5 OFFSET $6`,
+      branchId, from, to, userId, opts.limit, offset,
     )
 
     const countRows = await this.db.$queryRawUnsafe<{ total: bigint }[]>(
       `SELECT COUNT(*) AS total
        FROM "${this.schema}".shifts s
-       WHERE s.branch_id = $1 AND s.status = 'CLOSED'
+       WHERE s.status = 'CLOSED'
+         AND ($1::text IS NULL OR s.branch_id = $1::text)
          AND ($2::timestamptz IS NULL OR s.closed_at >= $2)
-         AND ($3::timestamptz IS NULL OR s.closed_at <= $3)`,
-      branchId, from, to,
+         AND ($3::timestamptz IS NULL OR s.closed_at <= $3)
+         AND ($4::text IS NULL OR s.user_id = $4::text)`,
+      branchId, from, to, userId,
     )
 
     const toShiftClosure = (row: RawRow): ShiftClosure | null => {

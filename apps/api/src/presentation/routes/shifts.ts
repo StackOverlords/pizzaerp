@@ -117,7 +117,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
   )
 
   // GET /shifts/history — historial paginado de turnos cerrados (solo ADMIN)
-  fastify.get<{ Querystring: { page?: string; limit?: string; from?: string; to?: string } }>(
+  fastify.get<{ Querystring: { page?: string; limit?: string; from?: string; to?: string; userId?: string } }>(
     '/history',
     {
       schema: {
@@ -126,10 +126,11 @@ export async function shiftRoutes(fastify: FastifyInstance) {
         querystring: {
           type: 'object',
           properties: {
-            page:  { type: 'string' },
-            limit: { type: 'string' },
-            from:  { type: 'string', format: 'date-time' },
-            to:    { type: 'string', format: 'date-time' },
+            page:   { type: 'string' },
+            limit:  { type: 'string' },
+            from:   { type: 'string', format: 'date-time' },
+            to:     { type: 'string', format: 'date-time' },
+            userId: { type: 'string' },
           },
         },
         response: {
@@ -159,19 +160,19 @@ export async function shiftRoutes(fastify: FastifyInstance) {
     },
     async (request) => {
       const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
 
-      const page  = parseInt(request.query.page  ?? '1',  10)
-      const limit = parseInt(request.query.limit ?? '10', 10)
-      const from  = request.query.from ? new Date(request.query.from) : undefined
-      const to    = request.query.to   ? new Date(request.query.to)   : undefined
+      const page   = parseInt(request.query.page  ?? '1',  10)
+      const limit  = parseInt(request.query.limit ?? '10', 10)
+      const from   = request.query.from   ? new Date(request.query.from) : undefined
+      const to     = request.query.to     ? new Date(request.query.to)   : undefined
+      const userId = request.query.userId ?? undefined
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
         const shiftRepo   = new PrismaShiftRepository(db, schema)
         const listClosed  = createListClosedShiftsUseCase({ shiftRepository: shiftRepo, userRepository })
-        return listClosed({ branchId: branch_id, page, limit, from, to })
+        return listClosed({ branchId: branch_id ?? null, page, limit, from, to, userId })
       } finally {
         await db.$disconnect()
       }

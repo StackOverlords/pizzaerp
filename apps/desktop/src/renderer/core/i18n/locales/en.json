@@ -25,6 +25,12 @@
       "closeAll":       "Close All Tabs",
       "pinActive":      "Pin Tab",
       "unpinActive":    "Unpin Tab"
+    },
+    "shifts": {
+      "openShift":   "Shifts: Open shift",
+      "closeShift":  "Shifts: Close shift",
+      "viewCurrent": "Shifts: My shift",
+      "viewHistory": "Shifts: View history"
     }
   },
   "app": {
@@ -85,7 +91,71 @@
     }
   },
   "sidebar": {
-    "settings": "Settings"
+    "settings": "Settings",
+    "shifts": "Shifts"
+  },
+  "shifts": {
+    "alreadyOpen":  "You already have an open shift",
+    "noOpenShift":  "No shift is currently open",
+    "adminOnly":    "Only available to administrators",
+    "indicator": {
+      "loading": "Loading shift…",
+      "open":    "Shift open · {{time}}",
+      "closed":  "No shift"
+    },
+    "open": {
+      "title":       "Open shift",
+      "initialCash": "Initial cash",
+      "submit":      "Open shift",
+      "submitting":  "Opening…"
+    },
+    "close": {
+      "title":           "Close shift",
+      "declaredCash":    "Declared cash",
+      "declaredQrCount": "QR payment count",
+      "notes":           "Notes (optional)",
+      "submit":          "Close shift",
+      "submitting":      "Closing…",
+      "helpQrCount":     "Number of QR payments received, not the total amount"
+    },
+    "summary": {
+      "title":       "Closure summary",
+      "cash":        "Cash",
+      "qrCount":     "QR payments",
+      "declared":    "Declared",
+      "expected":    "Expected",
+      "difference":  "Difference",
+      "close":       "Done",
+      "notes":       "Notes"
+    },
+    "history": {
+      "title":   "Shift history",
+      "from":    "From",
+      "to":      "To",
+      "empty":   "No closed shifts in this period",
+      "columns": {
+        "cashier":          "Cashier",
+        "openedAt":         "Opened at",
+        "closedAt":         "Closed at",
+        "declaredCash":     "Declared cash",
+        "cashDifference":   "Cash diff.",
+        "qrCountDifference":"QR diff."
+      },
+      "filters": {
+        "closedAt": "Closed at",
+        "cashier":  "Cashier"
+      }
+    },
+    "current": {
+      "empty": {
+        "title": "You have no open shift",
+        "cta":   "Open shift"
+      },
+      "opened":      "Opened at",
+      "initialCash": "Initial cash",
+      "elapsed":     "Elapsed time",
+      "closeCta":    "Close shift"
+    }
   },
   "settings": {
     "title": "Settings",

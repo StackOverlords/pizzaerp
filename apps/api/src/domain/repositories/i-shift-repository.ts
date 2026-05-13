@@ -12,6 +12,7 @@ export interface FindClosedOpts {
   limit: number
   from?: Date
   to?: Date
+  userId?: string
 }
 
 export interface IShiftRepository {
@@ -20,5 +21,5 @@ export interface IShiftRepository {
   open(data: OpenShiftData): Promise<Shift>
   close(id: string): Promise<Shift>
   getSalesSummary(shiftId: string): Promise<ShiftSalesSummary>
-  findClosed(branchId: string, opts: FindClosedOpts): Promise<{ data: ShiftWithClosure[]; total: number }>
+  findClosed(branchId: string | null, opts: FindClosedOpts): Promise<{ data: ShiftWithClosure[]; total: number }>
 }

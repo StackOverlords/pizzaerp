@@ -25,6 +25,12 @@
       "closeAll":       "Cerrar todas las pestañas",
       "pinActive":      "Fijar pestaña",
       "unpinActive":    "Desfijar pestaña"
+    },
+    "shifts": {
+      "openShift":   "Turnos: Abrir turno",
+      "closeShift":  "Turnos: Cerrar turno",
+      "viewCurrent": "Turnos: Mi turno",
+      "viewHistory": "Turnos: Ver historial"
     }
   },
   "app": {
@@ -85,7 +91,71 @@
     }
   },
   "sidebar": {
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "shifts": "Turnos"
+  },
+  "shifts": {
+    "alreadyOpen":  "Ya tenés un turno abierto",
+    "noOpenShift":  "No hay turno abierto",
+    "adminOnly":    "Solo disponible para administradores",
+    "indicator": {
+      "loading": "Cargando turno…",
+      "open":    "Turno abierto · {{time}}",
+      "closed":  "Sin turno"
+    },
+    "open": {
+      "title":       "Abrir turno",
+      "initialCash": "Efectivo inicial",
+      "submit":      "Abrir turno",
+      "submitting":  "Abriendo…"
+    },
+    "close": {
+      "title":           "Cerrar turno",
+      "declaredCash":    "Efectivo declarado",
+      "declaredQrCount": "Cantidad de pagos QR",
+      "notes":           "Notas (opcional)",
+      "submit":          "Cerrar turno",
+      "submitting":      "Cerrando…",
+      "helpQrCount":     "Cantidad de pagos QR recibidos, no el monto total"
+    },
+    "summary": {
+      "title":       "Resumen de cierre",
+      "cash":        "Efectivo",
+      "qrCount":     "Pagos QR",
+      "declared":    "Declarado",
+      "expected":    "Esperado",
+      "difference":  "Diferencia",
+      "close":       "Listo",
+      "notes":       "Notas"
+    },
+    "history": {
+      "title":   "Historial de turnos",
+      "from":    "Desde",
+      "to":      "Hasta",
+      "empty":   "No hay turnos cerrados en este período",
+      "columns": {
+        "cashier":          "Cajero",
+        "openedAt":         "Apertura",
+        "closedAt":         "Cierre",
+        "declaredCash":     "Efectivo declarado",
+        "cashDifference":   "Dif. efectivo",
+        "qrCountDifference":"Dif. QR"
+      },
+      "filters": {
+        "closedAt": "Fecha de cierre",
+        "cashier":  "Cajero"
+      }
+    },
+    "current": {
+      "empty": {
+        "title": "No tenés turno abierto",
+        "cta":   "Abrir turno"
+      },
+      "opened":      "Apertura",
+      "initialCash": "Efectivo inicial",
+      "elapsed":     "Tiempo abierto",
+      "closeCta":    "Cerrar turno"
+    }
   },
   "settings": {
     "title": "Configuración",

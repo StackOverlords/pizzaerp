@@ -49,6 +49,10 @@ export type AppEvents = {
   // Órdenes (placeholder — expandir cuando se cree el módulo)
   'order.created':             { orderId: string }
   'order.status.changed':      { orderId: string; status: string }
+
+  // Turnos
+  'shifts.openDialog.requested':  undefined
+  'shifts.closeDialog.requested': undefined
 }
 
 export const eventBus = new EventBusClass<AppEvents>()

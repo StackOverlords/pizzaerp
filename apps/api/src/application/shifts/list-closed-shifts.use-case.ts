@@ -8,11 +8,12 @@ interface Dependencies {
 }
 
 export interface ListClosedShiftsInput {
-  branchId: string
+  branchId: string | null
   page: number
   limit: number
   from?: Date
   to?: Date
+  userId?: string
 }
 
 export interface ShiftHistoryItem extends ShiftWithClosure {
@@ -31,7 +32,7 @@ export function createListClosedShiftsUseCase({ shiftRepository, userRepository 
     const page = Math.max(1, input.page)
     const limit = Math.min(100, Math.max(1, input.limit))
 
-    const opts: FindClosedOpts = { page, limit, from: input.from, to: input.to }
+    const opts: FindClosedOpts = { page, limit, from: input.from, to: input.to, userId: input.userId }
     const { data, total } = await shiftRepository.findClosed(input.branchId, opts)
 
     const userIds = [...new Set(data.map(s => s.userId))]

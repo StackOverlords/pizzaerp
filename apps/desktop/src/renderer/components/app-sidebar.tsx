@@ -18,6 +18,7 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { commandRegistry } from '@/core/commands/command-registry'
 import { routes } from '@/config/routes'
@@ -25,6 +26,8 @@ import { openRoute } from '@/core/tabs'
 import { useActiveRoute } from '@/core/routing/use-active-route'
 import { SIDEBAR_ICON_THRESHOLD, useSidebarWidthStore } from '@/core/sidebar/use-sidebar-resize'
 import { useAppearanceStore } from '@/core/appearance/appearance-store'
+import { useAuthStore } from '@/core/auth/store'
+import { ShiftStatusIndicator } from '@/features/shifts/components/ShiftStatusIndicator'
 import type { RouteConfig } from '@/core/routing/types'
 
 const navRoutes = routes
@@ -188,6 +191,7 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const width = useSidebarWidthStore((s) => s.width)
   const toggle = useSidebarWidthStore((s) => s.toggle)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const iconOnly = width < SIDEBAR_ICON_THRESHOLD
 
   useEffect(() => {
@@ -218,7 +222,13 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-2 space-y-1">
+        {isAuthenticated && (
+          <>
+            <ShiftStatusIndicator />
+            <Separator className="my-1" />
+          </>
+        )}
         {iconOnly ? (
           <Tooltip>
             <TooltipTrigger

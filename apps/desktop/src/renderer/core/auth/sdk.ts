@@ -94,5 +94,5 @@ export const authSDK = new AuthSDK({
     },
   },
   storage: { type: 'localStorage' },
-  tokenRefresh: { enabled: true, bufferTime: 900 },
+  tokenRefresh: { enabled: true, bufferTime: 60 },
 })

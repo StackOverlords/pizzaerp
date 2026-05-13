@@ -1,7 +1,11 @@
 import { lazy } from 'react'
+import { Navigate } from 'react-router'
 import {
   ChartBar,
   ClipboardList,
+  Clock,
+  ClockArrowUp,
+  History,
   LayoutDashboard,
   Pizza,
   Settings,
@@ -12,6 +16,8 @@ import type { RouteConfig } from '@/core/routing/types'
 import { RouteRegistry } from '@/core/routing/route-registry'
 
 const SetupPage = lazy(() => import('@/pages/Setup'))
+const ShiftsCurrentPage = lazy(() => import('@/pages/ShiftsCurrent'))
+const ShiftsHistoryPage = lazy(() => import('@/pages/ShiftsHistory'))
 
 const Placeholder = ({ label }: { label: string }) => (
   <div className="p-6 text-foreground text-sm text-muted-foreground">{label}</div>
@@ -101,6 +107,38 @@ export const routes: RouteConfig[] = [
     element: <Placeholder label="Reportes" />,
     order: 4,
     tabConfig: { singleton: true },
+  },
+  {
+    id: 'shifts',
+    path: '/shifts',
+    label: 'Turnos',
+    icon: Clock,
+    element: <Navigate to="/shifts/current" replace />,
+    order: 5,
+    children: [
+      {
+        id: 'shifts.current',
+        path: '/shifts/current',
+        label: 'Mi turno',
+        icon: ClockArrowUp,
+        element: <ShiftsCurrentPage />,
+        component: ShiftsCurrentPage,
+        roles: ['CAJERO', 'ADMIN'],
+        order: 0,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'shifts.history',
+        path: '/shifts/history',
+        label: 'Historial',
+        icon: History,
+        element: <ShiftsHistoryPage />,
+        component: ShiftsHistoryPage,
+        roles: ['ADMIN'],
+        order: 1,
+        tabConfig: { singleton: true, closable: true },
+      },
+    ],
   },
   {
     id: 'settings',
