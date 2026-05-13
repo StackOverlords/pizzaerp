@@ -204,7 +204,7 @@ const translations: Record<string, Record<Locale, string>> = {
     en: 'An observation is required when sent and received quantities differ',
     es: 'Se requiere una observación cuando hay diferencia entre lo enviado y lo recibido',
   },
-  // Supply/dough closings & wastages
+  // Supply closings & wastages
   'Physical count cannot be negative': {
     en: 'Physical count cannot be negative',
     es: 'El conteo físico no puede ser negativo',
@@ -225,14 +225,14 @@ const translations: Record<string, Record<Locale, string>> = {
     en: 'Quantity must be greater than 0',
     es: 'La cantidad debe ser mayor a 0',
   },
-  // Dough
+  // Supply
   'Must confirm at least one dough type': {
-    en: 'Must confirm at least one dough type',
-    es: 'Debe confirmar al menos un tipo de masa',
+    en: 'Must confirm at least one supply type',
+    es: 'Debe confirmar al menos un tipo de insumo',
   },
   'Must include at least one dough type': {
-    en: 'Must include at least one dough type',
-    es: 'Debe incluir al menos un tipo de masa',
+    en: 'Must include at least one supply type',
+    es: 'Debe incluir al menos un tipo de insumo',
   },
   // Numeric validations (from Zod / domain)
   'baseQuantity must be greater than 0': {
