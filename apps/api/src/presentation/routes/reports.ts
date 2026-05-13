@@ -13,7 +13,7 @@ interface ReportQuery {
   to?: string
 }
 
-const doughTypeReportSchema = {
+const supplyTypeReportSchema = {
   type: 'object',
   properties: {
     supplyType: { type: 'string' },
@@ -32,7 +32,7 @@ const reportSchema = {
   properties: {
     branchId: { type: 'string' },
     date: { type: 'string' },
-    supplyTypes: { type: 'array', items: doughTypeReportSchema },
+    supplyTypes: { type: 'array', items: supplyTypeReportSchema },
     overallStatus: { type: 'string', enum: ['GREEN', 'YELLOW', 'RED'] },
   },
 }
