@@ -124,6 +124,13 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
   // Migración idempotente: agrega order_number a schemas existentes
   `ALTER TABLE IF EXISTS "${s}".orders ADD COLUMN IF NOT EXISTS order_number INT NOT NULL DEFAULT 1`,
 
+  // Índices compuestos para consultas paginadas de pedidos
+  `CREATE INDEX IF NOT EXISTS idx_orders_branch_created
+  ON "${s}".orders (branch_id, created_at DESC)`,
+
+  `CREATE INDEX IF NOT EXISTS idx_orders_shift_created
+  ON "${s}".orders (shift_id, created_at DESC)`,
+
   `CREATE TABLE IF NOT EXISTS "${s}".order_items (
     id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_id   TEXT NOT NULL REFERENCES "${s}".orders(id),

@@ -11,10 +11,25 @@ import { createGetOrderUseCase } from '../../application/orders/get-order.use-ca
 import { createPayOrderUseCase } from '../../application/orders/pay-order.use-case'
 import { createCancelOrderUseCase } from '../../application/orders/cancel-order.use-case'
 import { createApplyDiscountUseCase } from '../../application/orders/apply-discount.use-case'
+import { createListOrdersUseCase } from '../../application/orders/list-orders.use-case'
 import { PrismaOrderCancellationRepository } from '../../infrastructure/database/repositories/prisma-order-cancellation-repository'
 import { PrismaOrderDiscountRepository } from '../../infrastructure/database/repositories/prisma-order-discount-repository'
 import { userRepository } from '../../shared/container'
 import { Errors } from '../../shared/errors/app-error'
+import { UserRole } from '../../domain/entities/user'
+
+interface ListOrdersQuery {
+  shiftId?: string
+  status?: 'PENDING' | 'PAID' | 'CANCELLED'
+  userId?: string
+  branchId?: string
+  from?: string
+  to?: string
+  page?: string
+  limit?: string
+  sortBy?: 'createdAt' | 'orderNumber' | 'total'
+  sortOrder?: 'asc' | 'desc'
+}
 
 interface CreateOrderBody {
   items: Array<{
@@ -76,6 +91,34 @@ const orderResponseSchema = {
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
     items: { type: 'array', items: orderItemSchema },
+  },
+}
+
+const orderHeaderResponseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    orderNumber: { type: 'number' },
+    shiftId: { type: 'string' },
+    branchId: { type: 'string' },
+    userId: { type: 'string' },
+    status: { type: 'string', enum: ['PENDING', 'PAID', 'CANCELLED'] },
+    subtotal: { type: 'number' },
+    discountAmount: { type: 'number' },
+    total: { type: 'number' },
+    notes: { type: ['string', 'null'] },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+}
+
+const paginatedOrderResponseSchema = {
+  type: 'object',
+  properties: {
+    data: { type: 'array', items: orderHeaderResponseSchema },
+    total: { type: 'number' },
+    page: { type: 'number' },
+    limit: { type: 'number' },
   },
 }
 
@@ -155,6 +198,80 @@ export async function orderRoutes(fastify: FastifyInstance) {
           items: request.body.items,
         })
         return reply.code(201).send(order)
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // GET /orders — listar pedidos paginados con filtros
+  fastify.get<{ Querystring: ListOrdersQuery }>(
+    '/',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'Listar pedidos paginados con filtros',
+        querystring: {
+          type: 'object',
+          properties: {
+            shiftId:   { type: 'string' },
+            status:    { type: 'string', enum: ['PENDING', 'PAID', 'CANCELLED'] },
+            userId:    { type: 'string' },
+            branchId:  { type: 'string' },
+            from:      { type: 'string' },
+            to:        { type: 'string' },
+            page:      { type: 'string' },
+            limit:     { type: 'string' },
+            sortBy:    { type: 'string', enum: ['createdAt', 'orderNumber', 'total'] },
+            sortOrder: { type: 'string', enum: ['asc', 'desc'] },
+          },
+        },
+        response: { 200: paginatedOrderResponseSchema },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const { role, branch_id: jwtBranchId, tenant_id } = request.user
+
+      // CAJERO no puede pasar branchId ni userId como filtros
+      if (role === UserRole.CAJERO) {
+        if (request.query.branchId !== undefined)
+          throw Errors.forbidden('El cajero no puede filtrar por sucursal')
+        if (request.query.userId !== undefined)
+          throw Errors.forbidden('El cajero no puede filtrar por usuario')
+      }
+
+      if (!jwtBranchId) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+
+      const effectiveBranchId =
+        role === UserRole.ADMIN
+          ? (request.query.branchId ?? jwtBranchId)
+          : jwtBranchId
+
+      const effectiveUserId =
+        role === UserRole.ADMIN ? request.query.userId : undefined
+
+      const page  = request.query.page  ? parseInt(request.query.page,  10) : undefined
+      const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const orderRepo = new PrismaOrderRepository(db, schema)
+        const listOrders = createListOrdersUseCase({ orderRepository: orderRepo })
+        return listOrders({
+          branchId: effectiveBranchId,
+          shiftId:   request.query.shiftId,
+          status:    request.query.status,
+          userId:    effectiveUserId,
+          from:      request.query.from,
+          to:        request.query.to,
+          page,
+          limit,
+          sortBy:    request.query.sortBy,
+          sortOrder: request.query.sortOrder,
+        })
       } finally {
         await db.$disconnect()
       }
