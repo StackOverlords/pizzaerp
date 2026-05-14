@@ -30,9 +30,16 @@ import { useAuthStore } from '@/core/auth/store'
 import { ShiftStatusIndicator } from '@/features/shifts/components/ShiftStatusIndicator'
 import type { RouteConfig } from '@/core/routing/types'
 
-const navRoutes = routes
-  .filter((r) => r.showInSidebar !== false)
-  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+function canAccess(route: RouteConfig, userRole: string | undefined): boolean {
+  if (route.roles && route.roles.length > 0) {
+    if (!userRole || !route.roles.includes(userRole)) return false
+  }
+  const visibleChildren = (route.children ?? []).filter((c) => c.showInSidebar !== false)
+  if (visibleChildren.length > 0) {
+    return visibleChildren.some((c) => canAccess(c, userRole))
+  }
+  return true
+}
 
 // ─── Full mode ───────────────────────────────────────────────────────────────
 
@@ -43,6 +50,7 @@ function TabDot() {
 function NavItem({ route }: { route: RouteConfig }) {
   const { isRouteActive, isChildActive, isRouteOpen, isRouteTabActive } = useActiveRoute()
   const iconSize = useAppearanceStore((s) => s.sidebarIconSize)
+  const userRole = useAuthStore((s) => s.user?.role)
 
   const hasChildren = (route.children ?? []).length > 0
   const active = isRouteActive(route)
@@ -56,7 +64,7 @@ function NavItem({ route }: { route: RouteConfig }) {
 
   if (hasChildren) {
     const children = (route.children ?? [])
-      .filter((c) => c.showInSidebar !== false)
+      .filter((c) => c.showInSidebar !== false && canAccess(c, userRole))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     return (
@@ -124,6 +132,7 @@ const iconBtnClass = (active: boolean) =>
 function IconNavItem({ route }: { route: RouteConfig }) {
   const { isRouteActive, isChildActive } = useActiveRoute()
   const iconSize = useAppearanceStore((s) => s.sidebarIconSize)
+  const userRole = useAuthStore((s) => s.user?.role)
 
   const hasChildren = (route.children ?? []).length > 0
   const active = isRouteActive(route)
@@ -132,7 +141,7 @@ function IconNavItem({ route }: { route: RouteConfig }) {
 
   if (hasChildren) {
     const children = (route.children ?? [])
-      .filter((c) => c.showInSidebar !== false)
+      .filter((c) => c.showInSidebar !== false && canAccess(c, userRole))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     return (
@@ -192,7 +201,12 @@ export function AppSidebar() {
   const width = useSidebarWidthStore((s) => s.width)
   const toggle = useSidebarWidthStore((s) => s.toggle)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const userRole = useAuthStore((s) => s.user?.role)
   const iconOnly = width < SIDEBAR_ICON_THRESHOLD
+
+  const navRoutes = routes
+    .filter((r) => r.showInSidebar !== false && canAccess(r, userRole))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   useEffect(() => {
     commandRegistry.override('workbench.action.toggleSidebar', toggle)
