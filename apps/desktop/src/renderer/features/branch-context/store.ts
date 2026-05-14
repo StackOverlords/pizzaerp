@@ -5,6 +5,7 @@ import { eventBus } from '@/core/events/event-bus'
 
 interface BranchContextState {
   selectedBranchId: string | null
+  selectedBranchName: string | null
   _hasHydrated: boolean
   setSelectedBranchId: (id: string, name: string) => void
   clearSelectedBranchId: (reason?: 'user' | 'stale') => void
@@ -12,22 +13,32 @@ interface BranchContextState {
 
 export const useBranchContextStore = create<BranchContextState>()((set) => ({
   selectedBranchId: null,
+  selectedBranchName: null,
   _hasHydrated: false,
 
   setSelectedBranchId: (id, name) => {
-    set({ selectedBranchId: id })
+    set({ selectedBranchId: id, selectedBranchName: name })
     void storage.set(StorageKeys.branch.selectedId, id)
+    void storage.set(StorageKeys.branch.selectedName, name)
     eventBus.emit('branchContext.branch.selected', { branchId: id, name })
   },
 
   clearSelectedBranchId: (reason = 'user') => {
-    set({ selectedBranchId: null })
+    set({ selectedBranchId: null, selectedBranchName: null })
     void storage.delete(StorageKeys.branch.selectedId)
+    void storage.delete(StorageKeys.branch.selectedName)
     eventBus.emit('branchContext.branch.cleared', { reason })
   },
 }))
 
 ;(async () => {
-  const saved = await storage.get<string>(StorageKeys.branch.selectedId)
-  useBranchContextStore.setState({ selectedBranchId: saved ?? null, _hasHydrated: true })
+  const [savedId, savedName] = await Promise.all([
+    storage.get<string>(StorageKeys.branch.selectedId),
+    storage.get<string>(StorageKeys.branch.selectedName),
+  ])
+  useBranchContextStore.setState({
+    selectedBranchId: savedId ?? null,
+    selectedBranchName: savedName ?? null,
+    _hasHydrated: true,
+  })
 })()
