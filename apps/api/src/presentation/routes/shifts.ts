@@ -15,6 +15,14 @@ import { Errors } from '../../shared/errors/app-error'
 
 interface OpenShiftBody {
   initialCash: number
+  branchId?: string
+}
+
+interface CloseShiftBody {
+  declaredCash: number
+  declaredQrCount: number
+  notes?: string
+  branchId?: string
 }
 
 const closureSchema = {
@@ -60,6 +68,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
           required: ['initialCash'],
           properties: {
             initialCash: { type: 'number', minimum: 0 },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 201: shiftResponseSchema },
@@ -68,15 +77,17 @@ export async function shiftRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request, reply) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.body.branchId ?? null) : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaShiftRepository(db, schema)
         const openShift = createOpenShiftUseCase({ shiftRepository: repo })
-        const shift = await openShift({ userId: user_id, branchId: branch_id, initialCash: request.body.initialCash })
+        const shift = await openShift({ userId: user_id, branchId: effectiveBranchId, initialCash: request.body.initialCash })
         return reply.code(201).send(shift)
       } finally {
         await db.$disconnect()
@@ -180,7 +191,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
   )
 
   // POST /shifts/close — cierre ciego de caja
-  fastify.post<{ Body: { declaredCash: number; declaredQrCount: number; notes?: string } }>(
+  fastify.post<{ Body: CloseShiftBody }>(
     '/close',
     {
       schema: {
@@ -193,6 +204,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
             declaredCash: { type: 'number', minimum: 0 },
             declaredQrCount: { type: 'integer', minimum: 0 },
             notes: { type: 'string' },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: {
@@ -224,8 +236,10 @@ export async function shiftRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.body.branchId ?? null) : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -235,7 +249,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
         const closeShift = createCloseShiftUseCase({ shiftRepository: shiftRepo, shiftClosureRepository: closureRepo })
         return closeShift({
           userId: user_id,
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           declaredCash: request.body.declaredCash,
           declaredQrCount: request.body.declaredQrCount,
           notes: request.body.notes,

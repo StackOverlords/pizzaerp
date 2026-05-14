@@ -38,6 +38,7 @@ interface CreateOrderBody {
     notes?: string
   }>
   notes?: string
+  branchId?: string
 }
 
 interface PayOrderBody {
@@ -169,6 +170,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
               },
             },
             notes: { type: 'string' },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 201: orderResponseSchema },
@@ -177,8 +179,10 @@ export async function orderRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request, reply) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.body.branchId ?? null) : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -193,7 +197,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
         })
         const order = await createOrder({
           userId: user_id,
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           notes: request.body.notes,
           items: request.body.items,
         })

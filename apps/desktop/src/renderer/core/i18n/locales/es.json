@@ -5,44 +5,48 @@
   },
   "commands": {
     "workbench": {
-      "toggleSidebar":  "Alternar barra lateral",
-      "showCommands":   "Paleta de comandos",
-      "toggleMenubar":  "Alternar barra de menú",
-      "toggleTabbar":   "Alternar barra de pestañas"
+      "toggleSidebar": "Alternar barra lateral",
+      "showCommands": "Paleta de comandos",
+      "toggleMenubar": "Alternar barra de menú",
+      "toggleTabbar": "Alternar barra de pestañas"
     },
     "settings": {
-      "open":           "Configuración",
-      "goGeneral":      "Configuración: General",
-      "goAppearance":   "Configuración: Apariencia",
-      "goWorkbench":    "Configuración: Workbench",
-      "goAccount":      "Configuración: Cuenta",
-      "goKeybindings":  "Configuración: Atajos de teclado"
+      "open": "Configuración",
+      "goGeneral": "Configuración: General",
+      "goAppearance": "Configuración: Apariencia",
+      "goWorkbench": "Configuración: Workbench",
+      "goAccount": "Configuración: Cuenta",
+      "goKeybindings": "Configuración: Atajos de teclado"
     },
     "tabs": {
-      "closeActive":    "Cerrar pestaña",
-      "nextTab":        "Pestaña siguiente",
-      "prevTab":        "Pestaña anterior",
-      "closeAll":       "Cerrar todas las pestañas",
-      "pinActive":      "Fijar pestaña",
-      "unpinActive":    "Desfijar pestaña"
+      "closeActive": "Cerrar pestaña",
+      "nextTab": "Pestaña siguiente",
+      "prevTab": "Pestaña anterior",
+      "closeAll": "Cerrar todas las pestañas",
+      "pinActive": "Fijar pestaña",
+      "unpinActive": "Desfijar pestaña"
     },
     "shifts": {
-      "openShift":   "Turnos: Abrir turno",
-      "closeShift":  "Turnos: Cerrar turno",
+      "openShift": "Turnos: Abrir turno",
+      "closeShift": "Turnos: Cerrar turno",
       "viewCurrent": "Turnos: Mi turno",
       "viewHistory": "Turnos: Ver historial"
     },
     "menu": {
-      "viewProducts":    "Menú: Productos",
-      "viewCategories":  "Menú: Categorías",
-      "createDish":      "Menú: Nuevo plato",
-      "createCategory":  "Menú: Nueva categoría"
+      "viewProducts": "Menú: Productos",
+      "viewCategories": "Menú: Categorías",
+      "createDish": "Menú: Nuevo plato",
+      "createCategory": "Menú: Nueva categoría"
     },
     "staff": {
-      "viewUsers":     "Personal: Usuarios",
-      "viewBranches":  "Personal: Sucursales",
-      "createUser":    "Personal: Nuevo usuario",
-      "createBranch":  "Personal: Nueva sucursal"
+      "viewUsers": "Personal: Usuarios",
+      "viewBranches": "Personal: Sucursales",
+      "createUser": "Personal: Nuevo usuario",
+      "createBranch": "Personal: Nueva sucursal"
+    },
+    "branchContext": {
+      "selectBranch": "Sucursal: Seleccionar sucursal",
+      "clearBranch": "Sucursal: Limpiar sucursal activa"
     }
   },
   "app": {
@@ -55,7 +59,7 @@
     "title": "Ingresá los datos"
   },
   "common": {
-    "edit":   "Editar",
+    "edit": "Editar",
     "delete": "Eliminar",
     "cancel": "Cancelar",
     "loading": "Cargando..."
@@ -113,102 +117,102 @@
     "shifts": "Turnos"
   },
   "shifts": {
-    "alreadyOpen":  "Ya tenés un turno abierto",
-    "noOpenShift":  "No hay turno abierto",
-    "adminOnly":    "Solo disponible para administradores",
+    "alreadyOpen": "Ya tenés un turno abierto",
+    "noOpenShift": "No hay turno abierto",
+    "adminOnly": "Solo disponible para administradores",
     "indicator": {
       "loading": "Cargando turno…",
-      "open":    "Turno abierto · {{time}}",
-      "closed":  "Sin turno"
+      "open": "Turno abierto · {{time}}",
+      "closed": "Sin turno"
     },
     "open": {
-      "title":       "Abrir turno",
+      "title": "Abrir turno",
       "initialCash": "Efectivo inicial",
-      "submit":      "Abrir turno",
-      "submitting":  "Abriendo…"
+      "submit": "Abrir turno",
+      "submitting": "Abriendo…"
     },
     "close": {
-      "title":           "Cerrar turno",
-      "declaredCash":    "Efectivo declarado",
+      "title": "Cerrar turno",
+      "declaredCash": "Efectivo declarado",
       "declaredQrCount": "Cantidad de pagos QR",
-      "notes":           "Notas (opcional)",
-      "submit":          "Cerrar turno",
-      "submitting":      "Cerrando…",
-      "helpQrCount":     "Cantidad de pagos QR recibidos, no el monto total"
+      "notes": "Notas (opcional)",
+      "submit": "Cerrar turno",
+      "submitting": "Cerrando…",
+      "helpQrCount": "Cantidad de pagos QR recibidos, no el monto total"
     },
     "summary": {
-      "title":       "Resumen de cierre",
-      "cash":        "Efectivo",
-      "qrCount":     "Pagos QR",
-      "declared":    "Declarado",
-      "expected":    "Esperado",
-      "difference":  "Diferencia",
-      "close":       "Listo",
-      "notes":       "Notas"
+      "title": "Resumen de cierre",
+      "cash": "Efectivo",
+      "qrCount": "Pagos QR",
+      "declared": "Declarado",
+      "expected": "Esperado",
+      "difference": "Diferencia",
+      "close": "Listo",
+      "notes": "Notas"
     },
     "history": {
-      "title":   "Historial de turnos",
-      "from":    "Desde",
-      "to":      "Hasta",
-      "empty":   "No hay turnos cerrados en este período",
+      "title": "Historial de turnos",
+      "from": "Desde",
+      "to": "Hasta",
+      "empty": "No hay turnos cerrados en este período",
       "columns": {
-        "cashier":          "Cajero",
-        "openedAt":         "Apertura",
-        "closedAt":         "Cierre",
-        "declaredCash":     "Efectivo declarado",
-        "cashDifference":   "Dif. efectivo",
-        "qrCountDifference":"Dif. QR"
+        "cashier": "Cajero",
+        "openedAt": "Apertura",
+        "closedAt": "Cierre",
+        "declaredCash": "Efectivo declarado",
+        "cashDifference": "Dif. efectivo",
+        "qrCountDifference": "Dif. QR"
       },
       "filters": {
         "closedAt": "Fecha de cierre",
-        "cashier":  "Cajero"
+        "cashier": "Cajero"
       }
     },
     "current": {
       "empty": {
         "title": "No tenés turno abierto",
-        "cta":   "Abrir turno"
+        "cta": "Abrir turno"
       },
-      "opened":      "Apertura",
+      "opened": "Apertura",
       "initialCash": "Efectivo inicial",
-      "elapsed":     "Tiempo abierto",
-      "closeCta":    "Cerrar turno"
+      "elapsed": "Tiempo abierto",
+      "closeCta": "Cerrar turno"
     }
   },
   "staff": {
     "adminOnly": "Solo disponible para administradores",
     "roles": {
-      "ADMIN":   "Admin",
-      "CAJERO":  "Cajero",
+      "ADMIN": "Admin",
+      "CAJERO": "Cajero",
       "HORNERO": "Hornero"
     },
     "users": {
-      "title":  "Usuarios",
+      "title": "Usuarios",
       "newCta": "Nuevo usuario",
-      "empty":  "No hay usuarios registrados.",
+      "empty": "No hay usuarios registrados.",
       "form": {
-        "createTitle":  "Nuevo usuario",
-        "editTitle":    "Editar usuario",
-        "username":     "Usuario",
-        "password":     "Contraseña",
-        "role":         "Rol",
-        "branch":       "Sucursal",
-        "branchNone":   "Sin sucursal",
+        "createTitle": "Nuevo usuario",
+        "editTitle": "Editar usuario",
+        "username": "Usuario",
+        "password": "Contraseña",
+        "role": "Rol",
+        "branch": "Sucursal",
+        "branchNone": "Sin sucursal",
         "submitCreate": "Crear",
-        "submitEdit":   "Guardar cambios",
-        "submitting":   "Guardando..."
+        "submitEdit": "Guardar cambios",
+        "submitting": "Guardando..."
       },
       "table": {
-        "username":  "Usuario",
-        "role":      "Rol",
-        "branch":    "Sucursal",
+        "username": "Usuario",
+        "role": "Rol",
+        "branch": "Sucursal",
         "createdAt": "Creado"
       },
       "delete": {
-        "title":       "Eliminar usuario",
+        "title": "Eliminar usuario",
         "description": "¿Eliminar a {{username}}? Esta acción no se puede deshacer.",
-        "submit":      "Eliminar",
-        "submitting":  "Eliminando..."
+        "submit": "Eliminar",
+        "submitting": "Eliminando..."
       },
       "toast": {
         "created": "Usuario creado correctamente",
@@ -217,26 +221,26 @@
       }
     },
     "branches": {
-      "title":  "Sucursales",
+      "title": "Sucursales",
       "newCta": "Nueva sucursal",
-      "empty":  "No hay sucursales registradas.",
+      "empty": "No hay sucursales registradas.",
       "form": {
-        "createTitle":  "Nueva sucursal",
-        "editTitle":    "Editar sucursal",
-        "name":         "Nombre",
+        "createTitle": "Nueva sucursal",
+        "editTitle": "Editar sucursal",
+        "name": "Nombre",
         "submitCreate": "Crear",
-        "submitEdit":   "Guardar cambios",
-        "submitting":   "Guardando..."
+        "submitEdit": "Guardar cambios",
+        "submitting": "Guardando..."
       },
       "table": {
         "name": "Nombre"
       },
       "delete": {
-        "title":       "Eliminar sucursal",
+        "title": "Eliminar sucursal",
         "description": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
-        "warning":     "Asegurate de que la sucursal no tenga turnos abiertos. El servidor rechazará la eliminación si los hay.",
-        "submit":      "Eliminar",
-        "submitting":  "Eliminando..."
+        "warning": "Asegurate de que la sucursal no tenga turnos abiertos. El servidor rechazará la eliminación si los hay.",
+        "submit": "Eliminar",
+        "submitting": "Eliminando..."
       },
       "toast": {
         "created": "Sucursal creada correctamente",
@@ -329,5 +333,10 @@
       "reset": "Restablecer",
       "resetAll": "Restablecer todo"
     }
+  },
+  "branchContext": {
+    "selectPlaceholder": "Seleccionar sucursal",
+    "staleCleared": "Sucursal seleccionada ya no existe",
+    "notApplicable": "N/A"
   }
 }

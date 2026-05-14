@@ -86,6 +86,11 @@ export type AppEvents = {
   // Staff — diálogos (desde comandos)
   'staff.userDialog.requested':   { mode: 'create' | 'edit'; userId?: string }
   'staff.branchDialog.requested': { mode: 'create' | 'edit'; branchId?: string }
+
+  // Branch context (selector ADMIN)
+  'branchContext.branch.selected':      { branchId: string; name: string }
+  'branchContext.branch.cleared':       { reason: 'user' | 'stale' }
+  'branchContext.selector.focusRequested': undefined
 }
 
 export const eventBus = new EventBusClass<AppEvents>()

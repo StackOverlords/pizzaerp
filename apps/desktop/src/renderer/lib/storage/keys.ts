@@ -14,4 +14,8 @@ export const StorageKeys = {
   auth: {
     tenantSlug: 'auth:tenant-slug',
   },
+  branch: {
+    selectedId:   'branch:selected-id',
+    selectedName: 'branch:selected-name',
+  },
 } as const

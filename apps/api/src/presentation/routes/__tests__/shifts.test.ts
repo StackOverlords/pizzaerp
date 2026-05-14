@@ -24,6 +24,7 @@ let tenantId: string
 let branchId: string
 let cajeroToken: string
 let adminToken: string
+let adminNoBranchToken: string
 let cajeroUserId: string
 
 beforeAll(async () => {
@@ -81,6 +82,14 @@ beforeAll(async () => {
     user_id: 'admin-user-shifts-test',
     tenant_id: tenantId,
     branch_id: branchId,
+    role: UserRole.ADMIN,
+    type: 'access',
+  } satisfies JwtPayload)
+
+  adminNoBranchToken = server.jwt.sign({
+    user_id: 'admin-user-shifts-nobranch',
+    tenant_id: tenantId,
+    branch_id: null,
     role: UserRole.ADMIN,
     type: 'access',
   } satisfies JwtPayload)
@@ -339,5 +348,115 @@ describe('GET /api/v1/shifts/history', () => {
       url: '/api/v1/shifts/history',
     })
     expect(res.statusCode).toBe(401)
+  })
+})
+
+// ─── POST /shifts/open — ADMIN branch override ────────────────────────────────
+
+describe('POST /api/v1/shifts/open — ADMIN branch override', () => {
+  it('SH-A1 — ADMIN sin branch en JWT + body.branchId → 201 con esa sucursal', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(adminNoBranchToken),
+      payload: { initialCash: 100, branchId },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().branchId).toBe(branchId)
+  })
+
+  it('SH-A2 — ADMIN sin branch en JWT y sin body.branchId → 400', async () => {
+    // Close any open shift for this admin first (SH-A1 may have opened one)
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(adminNoBranchToken),
+      payload: { declaredCash: 100, declaredQrCount: 0 },
+    })
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(adminNoBranchToken),
+      payload: { initialCash: 100 },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toBe('Debe seleccionar una sucursal')
+  })
+
+  it('SH-A3 — CAJERO con body.branchId → usa branch del JWT, no el del body', async () => {
+    const otherBranchId = 'branch-shifts-other-001'
+    // The body branchId is different from the cajero JWT branch
+    // Result should still be 201 (using the JWT branchId) or 409 (if shift still open from SH-12)
+    // Either way, the cajero's JWT branch_id controls — body is ignored
+    const openRes = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 50, branchId: otherBranchId },
+    })
+    // Could be 409 if cajero already has open shift, or 201 using their JWT branch
+    if (openRes.statusCode === 201) {
+      expect(openRes.json().branchId).toBe(branchId) // JWT branch, not body
+    } else {
+      expect([409]).toContain(openRes.statusCode) // already open
+    }
+  })
+
+  it('SH-A4 — ADMIN con branch en JWT + body.branchId → JWT gana, ignora body', async () => {
+    const otherBranchId = 'branch-shifts-other-002'
+    // Close any open admin shift first
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(adminToken),
+      payload: { declaredCash: 0, declaredQrCount: 0 },
+    })
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(adminToken),
+      payload: { initialCash: 50, branchId: otherBranchId },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().branchId).toBe(branchId) // JWT branch wins
+  })
+})
+
+// ─── POST /shifts/close — ADMIN branch override ───────────────────────────────
+
+describe('POST /api/v1/shifts/close — ADMIN branch override', () => {
+  it('SH-B1 — ADMIN sin branch en JWT + body.branchId → puede cerrar turno de esa sucursal', async () => {
+    // Open a shift as admin-no-branch first
+    const openRes = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(adminNoBranchToken),
+      payload: { initialCash: 200, branchId },
+    })
+    // It may already be open from SH-A1 cleanup. Accept 201 or 409
+    if (openRes.statusCode !== 201 && openRes.statusCode !== 409) {
+      throw new Error(`Expected 201 or 409, got ${openRes.statusCode}`)
+    }
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(adminNoBranchToken),
+      payload: { declaredCash: 100, declaredQrCount: 0, branchId },
+    })
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('SH-B2 — ADMIN sin branch en JWT y sin body.branchId → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(adminNoBranchToken),
+      payload: { declaredCash: 100, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toBe('Debe seleccionar una sucursal')
   })
 })
