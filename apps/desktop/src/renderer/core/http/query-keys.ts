@@ -40,4 +40,9 @@ export const queryKeys = {
     list:   () => ['branches', 'list'] as const,
     detail: (id: string) => ['branches', 'detail', id] as const,
   },
+
+  tenantSettings: {
+    all:     () => ['tenant-settings'] as const,
+    current: () => ['tenant-settings', 'current'] as const,
+  },
 }

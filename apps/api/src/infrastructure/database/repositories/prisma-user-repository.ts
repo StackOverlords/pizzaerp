@@ -31,6 +31,13 @@ export class PrismaUserRepository implements IUserRepository {
     return users.map(u => this.toEntity(u))
   }
 
+  async findAdminsWithPin(tenantId: string): Promise<User[]> {
+    const users = await this.db.user.findMany({
+      where: { tenantId, role: 'ADMIN', pinHash: { not: null } },
+    })
+    return users.map(u => this.toEntity(u))
+  }
+
   async updatePin(userId: string, pinHash: string): Promise<void> {
     await this.db.user.update({ where: { id: userId }, data: { pinHash } })
   }

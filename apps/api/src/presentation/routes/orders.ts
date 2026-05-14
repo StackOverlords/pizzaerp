@@ -15,6 +15,8 @@ import { createListOrdersUseCase } from '../../application/orders/list-orders.us
 import { PrismaOrderCancellationRepository } from '../../infrastructure/database/repositories/prisma-order-cancellation-repository'
 import { PrismaOrderDiscountRepository } from '../../infrastructure/database/repositories/prisma-order-discount-repository'
 import { userRepository } from '../../shared/container'
+import { PrismaTenantSettingsRepository } from '../../infrastructure/database/repositories/prisma-tenant-settings-repository'
+import { prisma } from '../../infrastructure/database/prisma'
 import { Errors } from '../../shared/errors/app-error'
 import { UserRole } from '../../domain/entities/user'
 
@@ -48,14 +50,12 @@ interface PayOrderBody {
 }
 
 interface CancelOrderBody {
-  adminUsername: string
-  adminPin: string
+  adminPin?: string
   reason?: string
 }
 
 interface ApplyDiscountBody {
-  adminUsername: string
-  adminPin: string
+  adminPin?: string
   type: 'AMOUNT' | 'PERCENTAGE'
   value: number
   reason?: string
@@ -374,9 +374,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
         },
         body: {
           type: 'object',
-          required: ['adminUsername', 'adminPin'],
           properties: {
-            adminUsername: { type: 'string', minLength: 1 },
             adminPin: { type: 'string', minLength: 4, maxLength: 6, pattern: '^\\d+$' },
             reason: { type: 'string' },
           },
@@ -406,9 +404,14 @@ export async function orderRoutes(fastify: FastifyInstance) {
     },
     async (request) => {
       const { user_id, tenant_id } = request.user
-      const { adminUsername, adminPin, reason } = request.body
+      const { adminPin, reason } = request.body
 
       const schema = await resolveTenantSchema(tenant_id)
+
+      const settingsRepo = new PrismaTenantSettingsRepository(prisma, schema)
+      const requirePinVal = await settingsRepo.get('require_pin_for_cancel')
+      const requirePin = (requirePinVal ?? 'true') === 'true'
+
       const db = createTenantClient(schema)
       try {
         const orderRepo = new PrismaOrderRepository(db, schema)
@@ -418,7 +421,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
           cancellationRepository: cancellationRepo,
           userRepository,
         })
-        return cancelOrder({ orderId: request.params.id, cajeroUserId: user_id, tenantId: tenant_id, adminUsername, adminPin, reason })
+        return cancelOrder({ orderId: request.params.id, cajeroUserId: user_id, tenantId: tenant_id, adminPin, reason, requirePin })
       } finally {
         await db.$disconnect()
       }
@@ -439,9 +442,8 @@ export async function orderRoutes(fastify: FastifyInstance) {
         },
         body: {
           type: 'object',
-          required: ['adminUsername', 'adminPin', 'type', 'value'],
+          required: ['type', 'value'],
           properties: {
-            adminUsername: { type: 'string', minLength: 1 },
             adminPin: { type: 'string', minLength: 4, maxLength: 6, pattern: '^\\d+$' },
             type: { type: 'string', enum: ['AMOUNT', 'PERCENTAGE'] },
             value: { type: 'number', exclusiveMinimum: 0 },
@@ -474,10 +476,15 @@ export async function orderRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request) => {
-      const { user_id: _userId, tenant_id } = request.user
-      const { adminUsername, adminPin, type, value, reason } = request.body
+      const { user_id, tenant_id } = request.user
+      const { adminPin, type, value, reason } = request.body
 
       const schema = await resolveTenantSchema(tenant_id)
+
+      const settingsRepo = new PrismaTenantSettingsRepository(prisma, schema)
+      const requirePinVal = await settingsRepo.get('require_pin_for_discount')
+      const requirePin = (requirePinVal ?? 'true') === 'true'
+
       const db = createTenantClient(schema)
       try {
         const orderRepo = new PrismaOrderRepository(db, schema)
@@ -487,7 +494,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
           discountRepository: discountRepo,
           userRepository,
         })
-        return applyDiscount({ orderId: request.params.id, tenantId: tenant_id, adminUsername, adminPin, type, value, reason })
+        return applyDiscount({ orderId: request.params.id, tenantId: tenant_id, cajeroUserId: user_id, adminPin, type, value, reason, requirePin })
       } finally {
         await db.$disconnect()
       }

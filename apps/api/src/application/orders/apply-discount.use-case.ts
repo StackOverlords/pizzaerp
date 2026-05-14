@@ -4,7 +4,6 @@ import type { IUserRepository } from '../../domain/repositories/i-user-repositor
 import type { Order } from '../../domain/entities/order'
 import type { OrderDiscount, DiscountType } from '../../domain/entities/order-discount'
 import { OrderStatus } from '../../domain/entities/order'
-import { UserRole } from '../../domain/entities/user'
 import { Errors } from '../../shared/errors/app-error'
 import { bcryptService } from '../../infrastructure/auth/bcrypt.service'
 import { pinRateLimiter } from '../../shared/services/pin-rate-limiter'
@@ -18,11 +17,12 @@ interface Dependencies {
 export interface ApplyDiscountInput {
   orderId: string
   tenantId: string
-  adminUsername: string
-  adminPin: string
+  cajeroUserId: string
+  adminPin?: string
   type: DiscountType
   value: number
   reason?: string
+  requirePin: boolean
 }
 
 export interface ApplyDiscountResult {
@@ -43,27 +43,35 @@ export function createApplyDiscountUseCase({ orderRepository, discountRepository
       throw Errors.badRequest('Discount value must be greater than 0')
     }
 
-    if (pinRateLimiter.isBlocked(input.tenantId, input.adminUsername)) {
-      const secs = pinRateLimiter.remainingSeconds(input.tenantId, input.adminUsername)
-      throw Errors.forbidden(`PIN bloqueado por intentos fallidos. Intente en ${secs} segundos`)
-    }
+    let adminUserId = input.cajeroUserId
 
-    const admin = await userRepository.findByUsername(input.adminUsername, input.tenantId)
-    if (!admin || admin.role !== UserRole.ADMIN) {
-      throw Errors.badRequest('Admin not found')
-    }
+    if (input.requirePin) {
+      if (!input.adminPin) throw Errors.badRequest('PIN de administrador requerido')
 
-    if (!admin.pinHash) {
-      throw Errors.badRequest('Admin has no PIN configured')
-    }
+      if (pinRateLimiter.isBlocked(input.tenantId, 'discount')) {
+        const secs = pinRateLimiter.remainingSeconds(input.tenantId, 'discount')
+        throw Errors.forbidden(`PIN bloqueado por intentos fallidos. Intente en ${secs} segundos`)
+      }
 
-    const valid = await bcryptService.compare(input.adminPin, admin.pinHash)
-    if (!valid) {
-      pinRateLimiter.recordFailure(input.tenantId, input.adminUsername)
-      throw Errors.unauthorized('Incorrect admin PIN')
-    }
+      const admins = await userRepository.findAdminsWithPin(input.tenantId)
+      if (admins.length === 0) throw Errors.badRequest('No hay administradores con PIN configurado')
 
-    pinRateLimiter.reset(input.tenantId, input.adminUsername)
+      let matched: (typeof admins)[number] | undefined
+      for (const admin of admins) {
+        if (await bcryptService.compare(input.adminPin, admin.pinHash!)) {
+          matched = admin
+          break
+        }
+      }
+
+      if (!matched) {
+        pinRateLimiter.recordFailure(input.tenantId, 'discount')
+        throw Errors.unauthorized('PIN incorrecto')
+      }
+
+      pinRateLimiter.reset(input.tenantId, 'discount')
+      adminUserId = matched.id
+    }
 
     let amount: number
     if (input.type === 'PERCENTAGE') {
@@ -80,7 +88,7 @@ export function createApplyDiscountUseCase({ orderRepository, discountRepository
     const updatedOrder = await orderRepository.applyDiscount(input.orderId, amount)
     const discount = await discountRepository.create({
       orderId: input.orderId,
-      adminUserId: admin.id,
+      adminUserId,
       type: input.type,
       value: input.value,
       amount,

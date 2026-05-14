@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import {
   Dialog,
   DialogContent,
@@ -13,10 +14,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { extractApiMessage } from '@/core/http/error'
+import { useTenantSettings } from '@/features/settings/api'
 import { useApplyDiscount } from '../api'
 import { applyDiscountInputSchema, DISCOUNT_TYPE, type ApplyDiscountInput } from '../schemas'
 import { AdminPinChallenge } from './AdminPinChallenge'
-import { z } from 'zod'
 
 interface ApplyDiscountDialogProps {
   orderId: string | null
@@ -30,6 +31,8 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
   const [apiError, setApiError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('form')
   const mutation = useApplyDiscount()
+  const { data: settings } = useTenantSettings()
+  const requirePin = settings?.requirePinForDiscount ?? true
 
   const schemaWithRefine = applyDiscountInputSchema.superRefine((data, ctx) => {
     if (data.type === DISCOUNT_TYPE.PERCENTAGE && data.value > 100) {
@@ -57,7 +60,7 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
     formState: { errors },
   } = useForm<ApplyDiscountInput>({
     resolver: zodResolver(schemaWithRefine),
-    defaultValues: { adminUsername: '', adminPin: '', type: DISCOUNT_TYPE.AMOUNT, value: 0, reason: '' },
+    defaultValues: { adminPin: '', type: DISCOUNT_TYPE.AMOUNT, value: 0, reason: '' },
   })
 
   const discountType = watch('type')
@@ -78,7 +81,8 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
     setApiError(null)
     setPhase('submitting')
     try {
-      await mutation.mutateAsync({ id: orderId, input: data })
+      const input = { ...data, adminPin: data.adminPin || undefined }
+      await mutation.mutateAsync({ id: orderId, input })
       handleClose(false)
     } catch (err) {
       setApiError(extractApiMessage(err))
@@ -94,15 +98,15 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <AdminPinChallenge
-            control={control}
-            errors={errors}
-            usernameFieldName="adminUsername"
-            pinFieldName="adminPin"
-            disabled={isSubmitting}
-          />
+          {requirePin && (
+            <AdminPinChallenge
+              control={control}
+              errors={errors}
+              pinFieldName="adminPin"
+              disabled={isSubmitting}
+            />
+          )}
 
-          {/* Discount type */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Tipo de descuento</label>
             <Controller
@@ -130,7 +134,6 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
             )}
           </div>
 
-          {/* Value */}
           <div className="space-y-1.5">
             <label htmlFor="discount-value" className="text-sm font-medium">
               Valor {isPercentage ? '(%)' : '(Gs.)'}
@@ -155,7 +158,6 @@ export function ApplyDiscountDialog({ orderId, onOpenChange, currentSubtotal }: 
             )}
           </div>
 
-          {/* Reason */}
           <div className="space-y-1.5">
             <label htmlFor="discount-reason" className="text-sm font-medium">
               Motivo <span className="text-muted-foreground">(opcional)</span>

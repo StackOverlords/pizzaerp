@@ -61,7 +61,7 @@ export default function ShiftsCurrentPage() {
   }
 
   return (
-    <div className="p-6 max-w-lg">
+    <div className="p-6 max-w-lg mx-auto">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-green-600">

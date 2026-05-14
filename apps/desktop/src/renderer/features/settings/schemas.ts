@@ -16,6 +16,17 @@ export const SETTINGS_SECTION = {
 } as const
 export type SettingsSection = (typeof SETTINGS_SECTION)[keyof typeof SETTINGS_SECTION]
 
+export const setPinSchema = z
+  .object({
+    pin:        z.string().regex(/^\d{6}$/, 'El PIN debe tener exactamente 6 dígitos'),
+    confirmPin: z.string(),
+  })
+  .refine((d) => d.pin === d.confirmPin, {
+    message: 'Los PINs no coinciden',
+    path: ['confirmPin'],
+  })
+export type SetPinInput = z.infer<typeof setPinSchema>
+
 export const generalSettingsSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']),
   showMenubar: z.boolean(),

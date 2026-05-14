@@ -73,9 +73,9 @@ export function CreateOrderForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Section 1: Item builder */}
-      <Card>
+    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+      {/* Left column — dish builder */}
+      <Card className="flex flex-col">
         <CardHeader className="pb-2">
           <p className="text-sm font-medium">Agregar platillo</p>
         </CardHeader>
@@ -125,95 +125,98 @@ export function CreateOrderForm() {
         </CardContent>
       </Card>
 
-      {/* Section 2: Items list */}
-      <Card>
+      {/* Right column — order summary + submit */}
+      <Card className="flex flex-col">
         <CardHeader className="pb-2">
           <p className="text-sm font-medium">Productos en la orden</p>
         </CardHeader>
-        <CardContent>
-          {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Agregá un platillo para empezar
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {fields.map((field, index) => {
-                const dish = dishCache.current.get(field.dishId)
-                const item = watchedItems[index]
-                return (
-                  <div key={field.id} className="flex items-center gap-2 text-sm">
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium">{dish?.name ?? field.dishId}</p>
-                      {item?.notes && (
-                        <p className="text-xs text-muted-foreground truncate">{item.notes}</p>
-                      )}
+        <CardContent className="flex flex-col flex-1 gap-4">
+          {/* Items list */}
+          <div className="flex-1 min-h-0">
+            {fields.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Agregá un platillo para empezar
+              </p>
+            ) : (
+              <div className="space-y-2 overflow-y-auto max-h-48">
+                {fields.map((field, index) => {
+                  const dish = dishCache.current.get(field.dishId)
+                  const item = watchedItems[index]
+                  return (
+                    <div key={field.id} className="flex items-center gap-2 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{dish?.name ?? field.dishId}</p>
+                        {item?.notes && (
+                          <p className="text-xs text-muted-foreground truncate">{item.notes}</p>
+                        )}
+                      </div>
+                      <span className="text-muted-foreground shrink-0">×{item?.quantity ?? field.quantity}</span>
+                      <span className="shrink-0 text-right w-20">
+                        {dish ? formatCurrency(dish.salePrice * (item?.quantity ?? field.quantity)) : '—'}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => remove(index)}
+                        disabled={isSubmitting}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
                     </div>
-                    <span className="text-muted-foreground shrink-0">×{item?.quantity ?? field.quantity}</span>
-                    <span className="shrink-0 text-right w-20">
-                      {dish ? formatCurrency(dish.salePrice * (item?.quantity ?? field.quantity)) : '—'}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => remove(index)}
-                      disabled={isSubmitting}
-                    >
-                      <Trash2 size={13} />
-                    </Button>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+            )}
+            {errors.items && !Array.isArray(errors.items) && (
+              <p className="text-sm text-destructive mt-2">{errors.items.message}</p>
+            )}
+          </div>
+
+          {/* Order notes */}
+          <div className="space-y-1.5">
+            <label htmlFor="order-notes" className="text-sm font-medium">
+              Notas de la orden <span className="text-muted-foreground">(opcional)</span>
+            </label>
+            <Textarea
+              id="order-notes"
+              rows={2}
+              maxLength={500}
+              disabled={isSubmitting}
+              {...register('notes')}
+            />
+            {errors.notes && (
+              <p className="text-sm text-destructive">{errors.notes.message}</p>
+            )}
+          </div>
+
+          {/* Total + submit */}
+          <div className="space-y-3">
+            <Separator />
+            <div className="flex justify-between text-sm font-medium">
+              <span>Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
-          )}
-          {errors.items && !Array.isArray(errors.items) && (
-            <p className="text-sm text-destructive mt-2">{errors.items.message}</p>
-          )}
+            <div className="flex justify-between text-base font-semibold">
+              <span>Total estimado</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+
+            {apiError && (
+              <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{apiError}</p>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={fields.length === 0 || isSubmitting}
+            >
+              {isSubmitting ? 'Creando orden...' : 'Crear orden'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Section 3: Order notes */}
-      <div className="space-y-1.5">
-        <label htmlFor="order-notes" className="text-sm font-medium">
-          Notas de la orden <span className="text-muted-foreground">(opcional)</span>
-        </label>
-        <Textarea
-          id="order-notes"
-          rows={2}
-          maxLength={500}
-          disabled={isSubmitting}
-          {...register('notes')}
-        />
-        {errors.notes && (
-          <p className="text-sm text-destructive">{errors.notes.message}</p>
-        )}
-      </div>
-
-      {/* Section 4: Totals + submit */}
-      <Separator />
-      <div className="space-y-3">
-        <div className="flex justify-between text-sm font-medium">
-          <span>Subtotal</span>
-          <span>{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="flex justify-between text-base font-semibold">
-          <span>Total estimado</span>
-          <span>{formatCurrency(subtotal)}</span>
-        </div>
-
-        {apiError && (
-          <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{apiError}</p>
-        )}
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={fields.length === 0 || isSubmitting}
-        >
-          {isSubmitting ? 'Creando orden...' : 'Crear orden'}
-        </Button>
-      </div>
     </form>
   )
 }
