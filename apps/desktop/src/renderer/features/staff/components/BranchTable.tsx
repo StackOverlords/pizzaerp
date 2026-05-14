@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, defineColumns } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/core/auth/store'
-import { eventBus } from '@/core/events/event-bus'
+import { commandRegistry } from '@/core/commands/command-registry'
 import { useBranches } from '../api'
 import type { Branch } from '../schemas'
 
@@ -41,7 +41,7 @@ export function BranchTable({ onEdit, onDelete }: BranchTableProps) {
     : undefined
 
   function handleNewBranch() {
-    eventBus.emit('staff.branchDialog.requested', { mode: 'create' })
+    commandRegistry.execute('staff.action.createBranch')
   }
 
   return (

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, defineColumns } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/core/auth/store'
-import { eventBus } from '@/core/events/event-bus'
+import { commandRegistry } from '@/core/commands/command-registry'
 import { useUsers, useBranches } from '../api'
 import { RoleBadge } from './RoleBadge'
 import type { User } from '../schemas'
@@ -74,7 +74,7 @@ export function UserTable({ onEdit, onDelete }: UserTableProps) {
     : undefined
 
   function handleNewUser() {
-    eventBus.emit('staff.userDialog.requested', { mode: 'create' })
+    commandRegistry.execute('staff.action.createUser')
   }
 
   return (

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/core/http/client'
 import { queryKeys } from '@/core/http/query-keys'
 import { useAuthStore } from '@/core/auth/store'
+import { getEffectiveBranchId } from '@/features/branch-context/selectors'
 import type { FilterOption } from '@/components/data-table'
 import {
   shiftSchema,
@@ -33,7 +34,12 @@ export function useOpenShift() {
   const queryClient = useQueryClient()
   return useMutation<Shift, unknown, OpenShiftInput>({
     mutationFn: async (input) => {
-      const { data } = await api.post<unknown>('/api/v1/shifts/open', input)
+      const user = useAuthStore.getState().user
+      const payload =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { ...input, branchId: getEffectiveBranchId() ?? undefined }
+          : input
+      const { data } = await api.post<unknown>('/api/v1/shifts/open', payload)
       return shiftSchema.parse(data)
     },
     onSuccess: async () => {
@@ -46,7 +52,12 @@ export function useCloseShift() {
   const queryClient = useQueryClient()
   return useMutation<CloseShiftResponse, unknown, CloseShiftInput>({
     mutationFn: async (input) => {
-      const { data } = await api.post<unknown>('/api/v1/shifts/close', input)
+      const user = useAuthStore.getState().user
+      const payload =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { ...input, branchId: getEffectiveBranchId() ?? undefined }
+          : input
+      const { data } = await api.post<unknown>('/api/v1/shifts/close', payload)
       return closeShiftResponseSchema.parse(data)
     },
     onSuccess: async () => {

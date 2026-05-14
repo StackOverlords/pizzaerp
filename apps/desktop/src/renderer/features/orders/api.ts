@@ -3,6 +3,7 @@ import { api } from '@/core/http/client'
 import { queryKeys } from '@/core/http/query-keys'
 import { useAuthStore } from '@/core/auth/store'
 import { eventBus } from '@/core/events/event-bus'
+import { getEffectiveBranchId } from '@/features/branch-context/selectors'
 import {
   orderWithItemsSchema,
   orderListPageSchema,
@@ -72,7 +73,12 @@ export function useCreateOrder() {
   const queryClient = useQueryClient()
   return useMutation<OrderWithItems, unknown, CreateOrderInput>({
     mutationFn: async (input) => {
-      const { data } = await api.post<unknown>('/api/v1/orders', input)
+      const user = useAuthStore.getState().user
+      const payload =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { ...input, branchId: getEffectiveBranchId() ?? undefined }
+          : input
+      const { data } = await api.post<unknown>('/api/v1/orders', payload)
       return orderWithItemsSchema.parse(data)
     },
     onSuccess: async (order) => {

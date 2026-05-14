@@ -9,6 +9,7 @@ import { registerShiftCommands } from '@/features/shifts'
 import { registerOrderCommands } from '@/features/orders'
 import { registerMenuCommands } from '@/features/menu'
 import { registerStaffCommands } from '@/features/staff'
+import { registerBranchContextCommands } from '@/features/branch-context'
 import { registerDefaultKeybindings } from '@/core/keybindings'
 import { initI18n } from '@/core/i18n'
 import { storage } from '@/lib/storage/adapter'
@@ -25,6 +26,7 @@ async function bootstrap() {
   registerOrderCommands()
   registerMenuCommands()
   registerStaffCommands()
+  registerBranchContextCommands()
   registerDefaultKeybindings()
 
   createRoot(document.getElementById('root')!).render(

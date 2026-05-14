@@ -5,44 +5,48 @@
   },
   "commands": {
     "workbench": {
-      "toggleSidebar":  "Toggle Sidebar",
-      "showCommands":   "Command Palette",
-      "toggleMenubar":  "Toggle Menu Bar",
-      "toggleTabbar":   "Toggle Tab Bar"
+      "toggleSidebar": "Toggle Sidebar",
+      "showCommands": "Command Palette",
+      "toggleMenubar": "Toggle Menu Bar",
+      "toggleTabbar": "Toggle Tab Bar"
     },
     "settings": {
-      "open":           "Settings",
-      "goGeneral":      "Settings: General",
-      "goAppearance":   "Settings: Appearance",
-      "goWorkbench":    "Settings: Workbench",
-      "goAccount":      "Settings: Account",
-      "goKeybindings":  "Settings: Keyboard Shortcuts"
+      "open": "Settings",
+      "goGeneral": "Settings: General",
+      "goAppearance": "Settings: Appearance",
+      "goWorkbench": "Settings: Workbench",
+      "goAccount": "Settings: Account",
+      "goKeybindings": "Settings: Keyboard Shortcuts"
     },
     "tabs": {
-      "closeActive":    "Close Tab",
-      "nextTab":        "Next Tab",
-      "prevTab":        "Previous Tab",
-      "closeAll":       "Close All Tabs",
-      "pinActive":      "Pin Tab",
-      "unpinActive":    "Unpin Tab"
+      "closeActive": "Close Tab",
+      "nextTab": "Next Tab",
+      "prevTab": "Previous Tab",
+      "closeAll": "Close All Tabs",
+      "pinActive": "Pin Tab",
+      "unpinActive": "Unpin Tab"
     },
     "shifts": {
-      "openShift":   "Shifts: Open shift",
-      "closeShift":  "Shifts: Close shift",
+      "openShift": "Shifts: Open shift",
+      "closeShift": "Shifts: Close shift",
       "viewCurrent": "Shifts: My shift",
       "viewHistory": "Shifts: View history"
     },
     "menu": {
-      "viewProducts":    "Menu: Products",
-      "viewCategories":  "Menu: Categories",
-      "createDish":      "Menu: New dish",
-      "createCategory":  "Menu: New category"
+      "viewProducts": "Menu: Products",
+      "viewCategories": "Menu: Categories",
+      "createDish": "Menu: New dish",
+      "createCategory": "Menu: New category"
     },
     "staff": {
-      "viewUsers":     "Staff: Users",
-      "viewBranches":  "Staff: Branches",
-      "createUser":    "Staff: New user",
-      "createBranch":  "Staff: New branch"
+      "viewUsers": "Staff: Users",
+      "viewBranches": "Staff: Branches",
+      "createUser": "Staff: New user",
+      "createBranch": "Staff: New branch"
+    },
+    "branchContext": {
+      "selectBranch": "Branch: Select branch",
+      "clearBranch": "Branch: Clear active branch"
     }
   },
   "app": {
@@ -55,7 +59,7 @@
     "title": "Enter details"
   },
   "common": {
-    "edit":   "Edit",
+    "edit": "Edit",
     "delete": "Delete",
     "cancel": "Cancel",
     "loading": "Loading..."
@@ -113,102 +117,102 @@
     "shifts": "Shifts"
   },
   "shifts": {
-    "alreadyOpen":  "You already have an open shift",
-    "noOpenShift":  "No shift is currently open",
-    "adminOnly":    "Only available to administrators",
+    "alreadyOpen": "You already have an open shift",
+    "noOpenShift": "No shift is currently open",
+    "adminOnly": "Only available to administrators",
     "indicator": {
       "loading": "Loading shift…",
-      "open":    "Shift open · {{time}}",
-      "closed":  "No shift"
+      "open": "Shift open · {{time}}",
+      "closed": "No shift"
     },
     "open": {
-      "title":       "Open shift",
+      "title": "Open shift",
       "initialCash": "Initial cash",
-      "submit":      "Open shift",
-      "submitting":  "Opening…"
+      "submit": "Open shift",
+      "submitting": "Opening…"
     },
     "close": {
-      "title":           "Close shift",
-      "declaredCash":    "Declared cash",
+      "title": "Close shift",
+      "declaredCash": "Declared cash",
       "declaredQrCount": "QR payment count",
-      "notes":           "Notes (optional)",
-      "submit":          "Close shift",
-      "submitting":      "Closing…",
-      "helpQrCount":     "Number of QR payments received, not the total amount"
+      "notes": "Notes (optional)",
+      "submit": "Close shift",
+      "submitting": "Closing…",
+      "helpQrCount": "Number of QR payments received, not the total amount"
     },
     "summary": {
-      "title":       "Closure summary",
-      "cash":        "Cash",
-      "qrCount":     "QR payments",
-      "declared":    "Declared",
-      "expected":    "Expected",
-      "difference":  "Difference",
-      "close":       "Done",
-      "notes":       "Notes"
+      "title": "Closure summary",
+      "cash": "Cash",
+      "qrCount": "QR payments",
+      "declared": "Declared",
+      "expected": "Expected",
+      "difference": "Difference",
+      "close": "Done",
+      "notes": "Notes"
     },
     "history": {
-      "title":   "Shift history",
-      "from":    "From",
-      "to":      "To",
-      "empty":   "No closed shifts in this period",
+      "title": "Shift history",
+      "from": "From",
+      "to": "To",
+      "empty": "No closed shifts in this period",
       "columns": {
-        "cashier":          "Cashier",
-        "openedAt":         "Opened at",
-        "closedAt":         "Closed at",
-        "declaredCash":     "Declared cash",
-        "cashDifference":   "Cash diff.",
-        "qrCountDifference":"QR diff."
+        "cashier": "Cashier",
+        "openedAt": "Opened at",
+        "closedAt": "Closed at",
+        "declaredCash": "Declared cash",
+        "cashDifference": "Cash diff.",
+        "qrCountDifference": "QR diff."
       },
       "filters": {
         "closedAt": "Closed at",
-        "cashier":  "Cashier"
+        "cashier": "Cashier"
       }
     },
     "current": {
       "empty": {
         "title": "You have no open shift",
-        "cta":   "Open shift"
+        "cta": "Open shift"
       },
-      "opened":      "Opened at",
+      "opened": "Opened at",
       "initialCash": "Initial cash",
-      "elapsed":     "Elapsed time",
-      "closeCta":    "Close shift"
+      "elapsed": "Elapsed time",
+      "closeCta": "Close shift"
     }
   },
   "staff": {
     "adminOnly": "Only available to administrators",
     "roles": {
-      "ADMIN":   "Admin",
-      "CAJERO":  "Cashier",
+      "ADMIN": "Admin",
+      "CAJERO": "Cashier",
       "HORNERO": "Baker"
     },
     "users": {
-      "title":  "Users",
+      "title": "Users",
       "newCta": "New user",
-      "empty":  "No users registered.",
+      "empty": "No users registered.",
       "form": {
-        "createTitle":  "New user",
-        "editTitle":    "Edit user",
-        "username":     "Username",
-        "password":     "Password",
-        "role":         "Role",
-        "branch":       "Branch",
-        "branchNone":   "No branch",
+        "createTitle": "New user",
+        "editTitle": "Edit user",
+        "username": "Username",
+        "password": "Password",
+        "role": "Role",
+        "branch": "Branch",
+        "branchNone": "No branch",
         "submitCreate": "Create",
-        "submitEdit":   "Save changes",
-        "submitting":   "Saving..."
+        "submitEdit": "Save changes",
+        "submitting": "Saving..."
       },
       "table": {
-        "username":  "Username",
-        "role":      "Role",
-        "branch":    "Branch",
+        "username": "Username",
+        "role": "Role",
+        "branch": "Branch",
         "createdAt": "Created"
       },
       "delete": {
-        "title":       "Delete user",
+        "title": "Delete user",
         "description": "Delete {{username}}? This action cannot be undone.",
-        "submit":      "Delete",
-        "submitting":  "Deleting..."
+        "submit": "Delete",
+        "submitting": "Deleting..."
       },
       "toast": {
         "created": "User created successfully",
@@ -217,26 +221,26 @@
       }
     },
     "branches": {
-      "title":  "Branches",
+      "title": "Branches",
       "newCta": "New branch",
-      "empty":  "No branches registered.",
+      "empty": "No branches registered.",
       "form": {
-        "createTitle":  "New branch",
-        "editTitle":    "Edit branch",
-        "name":         "Name",
+        "createTitle": "New branch",
+        "editTitle": "Edit branch",
+        "name": "Name",
         "submitCreate": "Create",
-        "submitEdit":   "Save changes",
-        "submitting":   "Saving..."
+        "submitEdit": "Save changes",
+        "submitting": "Saving..."
       },
       "table": {
         "name": "Name"
       },
       "delete": {
-        "title":       "Delete branch",
+        "title": "Delete branch",
         "description": "Delete {{name}}? This action cannot be undone.",
-        "warning":     "Make sure the branch has no open shifts. The server will reject the deletion if it does.",
-        "submit":      "Delete",
-        "submitting":  "Deleting..."
+        "warning": "Make sure the branch has no open shifts. The server will reject the deletion if it does.",
+        "submit": "Delete",
+        "submitting": "Deleting..."
       },
       "toast": {
         "created": "Branch created successfully",
@@ -329,5 +333,10 @@
       "reset": "Reset",
       "resetAll": "Reset all"
     }
+  },
+  "branchContext": {
+    "selectPlaceholder": "Select branch",
+    "staleCleared": "Selected branch no longer exists",
+    "notApplicable": "N/A"
   }
 }

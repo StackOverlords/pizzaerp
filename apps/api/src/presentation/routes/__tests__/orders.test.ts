@@ -25,6 +25,7 @@ let branchId: string
 let cajeroToken: string
 let cajeroUserId: string
 let adminToken: string
+let adminNoBranchToken: string
 let adminUsername: string
 let dishId: string
 let shiftId: string
@@ -91,6 +92,14 @@ beforeAll(async () => {
     user_id: admin.id,
     tenant_id: tenantId,
     branch_id: branchId,
+    role: UserRole.ADMIN,
+    type: 'access',
+  } satisfies JwtPayload)
+
+  adminNoBranchToken = server.jwt.sign({
+    user_id: 'admin-orders-nobranch',
+    tenant_id: tenantId,
+    branch_id: null,
     role: UserRole.ADMIN,
     type: 'access',
   } satisfies JwtPayload)
@@ -850,5 +859,61 @@ describe('GET /api/v1/orders', () => {
       headers: authHeader(cajeroToken),
     })
     expect(res.statusCode).toBe(400)
+  })
+})
+
+
+// ─── POST /orders — ADMIN branch override ────────────────────────────────────
+
+describe('POST /api/v1/orders — ADMIN branch override', () => {
+  it('OR-A1 — ADMIN sin branch en JWT + body.branchId → no devuelve 400 de sucursal faltante', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: { Authorization: `Bearer ${adminNoBranchToken}` },
+      payload: { items: [{ dishId, quantity: 1 }], branchId },
+    })
+    // Branch resolution succeeded — may fail for another reason (no open shift for admin user)
+    // but must NOT be 400 'Debe seleccionar una sucursal'
+    if (res.statusCode === 400) {
+      expect(res.json().message).not.toBe('Debe seleccionar una sucursal')
+    }
+  })
+
+  it('OR-A2 — ADMIN sin branch en JWT y sin body.branchId → 400 con mensaje correcto', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: { Authorization: `Bearer ${adminNoBranchToken}` },
+      payload: { items: [{ dishId, quantity: 1 }] },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toBe('Debe seleccionar una sucursal')
+  })
+
+  it('OR-A3 — CAJERO con body.branchId → usa branch del JWT (branchId en orden = JWT branch)', async () => {
+    const otherBranchId = 'branch-orders-other-999'
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: { Authorization: `Bearer ${cajeroToken}` },
+      payload: { items: [{ dishId, quantity: 1 }], branchId: otherBranchId },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().branchId).toBe(branchId) // JWT branch, not body
+  })
+
+  it('OR-A4 — ADMIN con branch en JWT + body.branchId → JWT gana, no devuelve 400 de sucursal', async () => {
+    const otherBranchId = 'branch-orders-other-888'
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: { items: [{ dishId, quantity: 1 }], branchId: otherBranchId },
+    })
+    // JWT branch was used (admin with branchId in JWT) — may fail for other reason but not 'no branch'
+    if (res.statusCode === 400) {
+      expect(res.json().message).not.toBe('Debe seleccionar una sucursal')
+    }
   })
 })

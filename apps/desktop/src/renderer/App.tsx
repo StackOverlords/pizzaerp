@@ -5,6 +5,7 @@ import { TitleBar } from '@/components/titlebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { PanelLeft } from 'lucide-react'
+import { BranchSelector } from '@/features/branch-context/components/BranchSelector'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarResizeHandle } from '@/components/sidebar-resize-handle'
 import { useSidebarWidthStore } from '@/core/sidebar/use-sidebar-resize'
@@ -81,6 +82,7 @@ function Shell() {
             >
               <PanelLeft size={16} />
             </Button>
+            <BranchSelector />
           </header>
           <ErrorBoundary fallback={({ error, reset }) => <ErrorFallback error={error} reset={reset} />}>
             <div className="flex-1 min-h-0 relative overflow-hidden">
