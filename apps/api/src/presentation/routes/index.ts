@@ -18,6 +18,7 @@ import { supplyTransferRoutes } from './supply-transfers'
 import { supplyWastageRoutes } from './supply-wastages'
 import { supplyClosingRoutes } from './supply-closings'
 import { reportRoutes } from './reports'
+import { tenantSettingsRoutes } from './tenant-settings'
 
 export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(healthRoute, { prefix: '/api/v1' })
@@ -39,4 +40,5 @@ export async function registerRoutes(fastify: FastifyInstance) {
   fastify.register(supplyWastageRoutes, { prefix: '/api/v1/supply-wastages' })
   fastify.register(supplyClosingRoutes, { prefix: '/api/v1/supply-closings' })
   fastify.register(reportRoutes, { prefix: '/api/v1/reports' })
+  fastify.register(tenantSettingsRoutes, { prefix: '/api/v1/tenant-settings' })
 }

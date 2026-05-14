@@ -5,6 +5,7 @@ export interface IUserRepository {
   findById(id: string): Promise<User | null>
   findByIds(ids: string[]): Promise<Pick<User, 'id' | 'username'>[]>
   findAllByTenant(tenantId: string): Promise<User[]>
+  findAdminsWithPin(tenantId: string): Promise<User[]>
   create(data: Omit<User, 'id' | 'createdAt'>): Promise<User>
   updatePin(userId: string, pinHash: string): Promise<void>
   updateRoleAndBranch(id: string, data: { role?: UserRole; branchId?: string | null }): Promise<User>

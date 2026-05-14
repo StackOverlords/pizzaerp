@@ -290,6 +290,18 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
        EXECUTE 'ALTER TABLE "${s}".supply_day_closures RENAME COLUMN dough_type TO supply_type';
      END IF;
    END $$`,
+
+  // ─── CONFIGURACIÓN DEL TENANT ────────────────────────────────────────────
+
+  `CREATE TABLE IF NOT EXISTS "${s}".tenant_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
+
+  `INSERT INTO "${s}".tenant_settings (key, value) VALUES
+    ('require_pin_for_cancel',   'true'),
+    ('require_pin_for_discount', 'true')
+   ON CONFLICT (key) DO NOTHING`,
 ]
 
 export class TenantSchemaService {

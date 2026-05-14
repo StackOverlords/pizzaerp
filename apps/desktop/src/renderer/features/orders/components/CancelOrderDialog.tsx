@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { extractApiMessage } from '@/core/http/error'
+import { useTenantSettings } from '@/features/settings/api'
 import { useCancelOrder } from '../api'
 import { cancelOrderInputSchema, type CancelOrderInput } from '../schemas'
 import { AdminPinChallenge } from './AdminPinChallenge'
@@ -26,6 +27,8 @@ export function CancelOrderDialog({ orderId, onOpenChange }: CancelOrderDialogPr
   const [apiError, setApiError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('form')
   const mutation = useCancelOrder()
+  const { data: settings } = useTenantSettings()
+  const requirePin = settings?.requirePinForCancel ?? true
 
   const {
     register,
@@ -35,7 +38,7 @@ export function CancelOrderDialog({ orderId, onOpenChange }: CancelOrderDialogPr
     formState: { errors },
   } = useForm<CancelOrderInput>({
     resolver: zodResolver(cancelOrderInputSchema),
-    defaultValues: { adminUsername: '', adminPin: '', reason: '' },
+    defaultValues: { adminPin: '', reason: '' },
   })
 
   const isSubmitting = phase === 'submitting'
@@ -54,7 +57,8 @@ export function CancelOrderDialog({ orderId, onOpenChange }: CancelOrderDialogPr
     setApiError(null)
     setPhase('submitting')
     try {
-      await mutation.mutateAsync({ id: orderId, input: data })
+      const input = { ...data, adminPin: data.adminPin || undefined }
+      await mutation.mutateAsync({ id: orderId, input })
       handleClose(false)
     } catch (err) {
       setApiError(extractApiMessage(err))
@@ -70,15 +74,15 @@ export function CancelOrderDialog({ orderId, onOpenChange }: CancelOrderDialogPr
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <AdminPinChallenge
-            control={control}
-            errors={errors}
-            usernameFieldName="adminUsername"
-            pinFieldName="adminPin"
-            disabled={isSubmitting}
-          />
+          {requirePin && (
+            <AdminPinChallenge
+              control={control}
+              errors={errors}
+              pinFieldName="adminPin"
+              disabled={isSubmitting}
+            />
+          )}
 
-          {/* Optional reason */}
           <div className="space-y-1.5">
             <label htmlFor="cancel-reason" className="text-sm font-medium">
               Motivo <span className="text-muted-foreground">(opcional)</span>

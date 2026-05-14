@@ -113,18 +113,16 @@ export const payOrderInputSchema = z.discriminatedUnion('method', [
 export type PayOrderInput = z.infer<typeof payOrderInputSchema>
 
 export const cancelOrderInputSchema = z.object({
-  adminUsername: z.string().min(1, 'Usuario requerido'),
-  adminPin:      z.string().regex(/^\d{6}$/, 'PIN de 6 dígitos'),
-  reason:        z.string().max(500).optional(),
+  adminPin: z.string().optional(),
+  reason:   z.string().max(500).optional(),
 })
 export type CancelOrderInput = z.infer<typeof cancelOrderInputSchema>
 
 export const applyDiscountInputSchema = z.object({
-  adminUsername: z.string().min(1, 'Usuario requerido'),
-  adminPin:      z.string().regex(/^\d{6}$/, 'PIN de 6 dígitos'),
-  type:          z.enum([DISCOUNT_TYPE.AMOUNT, DISCOUNT_TYPE.PERCENTAGE]),
-  value:         z.number().finite().positive('Debe ser mayor a 0'),
-  reason:        z.string().max(500).optional(),
+  adminPin: z.string().optional(),
+  type:     z.enum([DISCOUNT_TYPE.AMOUNT, DISCOUNT_TYPE.PERCENTAGE]),
+  value:    z.number().finite().positive('Debe ser mayor a 0'),
+  reason:   z.string().max(500).optional(),
 })
 export type ApplyDiscountInput = z.infer<typeof applyDiscountInputSchema>
 
