@@ -31,14 +31,4 @@ export const queryKeys = {
   users: {
     cashiers: () => ['users', 'cashiers'] as const,
   },
-
-  shifts: {
-    all:     () => ['shifts'] as const,
-    current: () => ['shifts', 'current'] as const,
-    history: (filters?: unknown) => ['shifts', 'history', filters] as const,
-  },
-
-  users: {
-    cashiers: () => ['users', 'cashiers'] as const,
-  },
 }
