@@ -8,3 +8,7 @@ dist
 .env
 .env.*
 !.env.example
+
+# Local tooling / editor artifacts
+.atl/
+commands/
