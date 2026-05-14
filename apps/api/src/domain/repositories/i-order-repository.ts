@@ -22,7 +22,7 @@ export interface CreateOrderData {
 }
 
 export interface ListOrdersFilters {
-  branchId: string
+  branchId?: string
   shiftId?: string
   status?: OrderStatus
   userId?: string

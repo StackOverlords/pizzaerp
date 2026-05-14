@@ -3,7 +3,7 @@ import type { IOrderRepository, ListOrdersFilters, OrderListResult } from '../..
 import type { OrderStatus } from '../../domain/entities/order'
 
 export interface ListOrdersInput {
-  branchId: string
+  branchId?: string
   shiftId?: string
   status?: OrderStatus
   userId?: string

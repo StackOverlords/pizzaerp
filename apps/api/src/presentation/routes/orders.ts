@@ -242,11 +242,12 @@ export async function orderRoutes(fastify: FastifyInstance) {
           throw Errors.forbidden('El cajero no puede filtrar por usuario')
       }
 
-      if (!jwtBranchId) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      if (role === UserRole.CAJERO && !jwtBranchId)
+        throw Errors.badRequest('El usuario no tiene sucursal asignada')
 
       const effectiveBranchId =
         role === UserRole.ADMIN
-          ? (request.query.branchId ?? jwtBranchId)
+          ? (request.query.branchId ?? jwtBranchId ?? undefined)
           : jwtBranchId
 
       const effectiveUserId =

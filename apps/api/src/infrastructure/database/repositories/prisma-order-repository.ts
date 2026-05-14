@@ -186,7 +186,7 @@ export class PrismaOrderRepository implements IOrderRepository {
               subtotal, discount_amount, total, notes, created_at, updated_at,
               COUNT(*) OVER() AS total_count
        FROM "${this.schema}".orders
-       WHERE branch_id = $1
+       WHERE ($1::text IS NULL OR branch_id = $1)
          AND ($2::text IS NULL OR shift_id = $2)
          AND ($3::text IS NULL OR status   = $3)
          AND ($4::text IS NULL OR user_id  = $4)
@@ -194,7 +194,7 @@ export class PrismaOrderRepository implements IOrderRepository {
          AND ($6::date IS NULL OR created_at::date <= $6::date)
        ORDER BY ${column} ${direction}
        LIMIT $7 OFFSET $8`,
-      filters.branchId,
+      filters.branchId ?? null,
       filters.shiftId ?? null,
       filters.status ?? null,
       filters.userId ?? null,
