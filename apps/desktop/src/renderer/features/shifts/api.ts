@@ -21,7 +21,12 @@ export function useCurrentShift() {
   return useQuery<Shift | null>({
     queryKey: queryKeys.shifts.current(),
     queryFn: async () => {
-      const { data } = await api.get<unknown>('/api/v1/shifts/current')
+      const user = useAuthStore.getState().user
+      const params =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { branchId: getEffectiveBranchId() ?? undefined }
+          : undefined
+      const { data } = await api.get<unknown>('/api/v1/shifts/current', { params })
       if (data === null || data === undefined) return null
       return shiftSchema.parse(data)
     },

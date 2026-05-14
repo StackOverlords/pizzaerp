@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,6 +18,8 @@ import {
 } from '@/components/ui/table'
 import { formatCurrency } from '@/lib/format'
 import { eventBus } from '@/core/events/event-bus'
+import { useAuthStore } from '@/core/auth/store'
+import { useUsers } from '@/features/staff/api'
 import { useOrder } from '../api'
 import { ORDER_STATUS } from '../schemas'
 
@@ -51,6 +54,14 @@ interface OrderDetailSheetProps {
 
 export function OrderDetailSheet({ orderId, onOpenChange }: OrderDetailSheetProps) {
   const { data: order, isLoading, isError, refetch } = useOrder(orderId)
+  const currentUser = useAuthStore((s) => s.user)
+  const { data: users } = useUsers()
+
+  const cashierName = useMemo(() => {
+    if (!order) return null
+    if (order.userId === currentUser?.id) return currentUser.username
+    return users?.find((u) => u.id === order.userId)?.username ?? `#${order.userId.slice(-8)}`
+  }, [order, currentUser, users])
 
   return (
     <Sheet open={!!orderId} onOpenChange={onOpenChange}>
@@ -91,10 +102,10 @@ export function OrderDetailSheet({ orderId, onOpenChange }: OrderDetailSheetProp
             <div className="px-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <span className="text-muted-foreground">Fecha</span>
               <span>{order.createdAt.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-muted-foreground">Cajero (ID)</span>
-              <span className="truncate">{order.userId}</span>
+              <span className="text-muted-foreground">Cajero</span>
+              <span className="truncate">{cashierName}</span>
               <span className="text-muted-foreground">Turno</span>
-              <span className="truncate">{order.shiftId}</span>
+              <span className="font-mono text-xs">#{order.shiftId.slice(-8)}</span>
             </div>
 
             {/* Items table */}

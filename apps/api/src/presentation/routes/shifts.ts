@@ -96,12 +96,18 @@ export async function shiftRoutes(fastify: FastifyInstance) {
   )
 
   // GET /shifts/current — retorna el turno abierto del usuario actual (null si no hay)
-  fastify.get(
+  fastify.get<{ Querystring: { branchId?: string } }>(
     '/current',
     {
       schema: {
         tags: ['shifts'],
         summary: 'Obtener turno abierto del cajero',
+        querystring: {
+          type: 'object',
+          properties: {
+            branchId: { type: 'string' },
+          },
+        },
         response: {
           200: {
             oneOf: [shiftResponseSchema, { type: 'null' }],
@@ -112,15 +118,17 @@ export async function shiftRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) return null
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.query.branchId ?? null) : branch_id
+      if (!effectiveBranchId) return null
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaShiftRepository(db, schema)
         const getCurrentShift = createGetCurrentShiftUseCase({ shiftRepository: repo })
-        return getCurrentShift(user_id, branch_id)
+        return getCurrentShift(user_id, effectiveBranchId)
       } finally {
         await db.$disconnect()
       }
