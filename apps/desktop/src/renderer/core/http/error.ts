@@ -16,6 +16,10 @@ export function extractApiMessage(error: unknown): string {
     return error.message
   }
   if (error instanceof Error) return error.message
+  // El interceptor del cliente convierte AxiosError → AppError (objeto plano { message, status })
+  // antes de que llegue al catch del consumidor — manejar ese caso explícitamente
+  const asObj = error as Record<string, unknown>
+  if (typeof asObj?.message === 'string' && asObj.message) return asObj.message
   return 'Error desconocido'
 }
 

@@ -55,6 +55,10 @@ export function useCloseShift() {
   })
 }
 
+/**
+ * @deprecated Use queryKeys.users.list() + filter('CAJERO') in callsites once shifts migrates.
+ * Coexists with staff.useUsers() — both queryKeys are invalidated by queryKeys.users.all().
+ */
 export function useStaffOptions(): { data?: FilterOption[]; isLoading?: boolean } {
   return useQuery({
     queryKey: queryKeys.users.cashiers(),

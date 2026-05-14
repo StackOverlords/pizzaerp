@@ -37,6 +37,12 @@
       "viewCategories":  "Menu: Categories",
       "createDish":      "Menu: New dish",
       "createCategory":  "Menu: New category"
+    },
+    "staff": {
+      "viewUsers":     "Staff: Users",
+      "viewBranches":  "Staff: Branches",
+      "createUser":    "Staff: New user",
+      "createBranch":  "Staff: New branch"
     }
   },
   "app": {
@@ -47,6 +53,12 @@
   },
   "prompt": {
     "title": "Enter details"
+  },
+  "common": {
+    "edit":   "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "loading": "Loading..."
   },
   "confirm": {
     "title": "Are you sure?",
@@ -161,6 +173,76 @@
       "initialCash": "Initial cash",
       "elapsed":     "Elapsed time",
       "closeCta":    "Close shift"
+    }
+  },
+  "staff": {
+    "adminOnly": "Only available to administrators",
+    "roles": {
+      "ADMIN":   "Admin",
+      "CAJERO":  "Cashier",
+      "HORNERO": "Baker"
+    },
+    "users": {
+      "title":  "Users",
+      "newCta": "New user",
+      "empty":  "No users registered.",
+      "form": {
+        "createTitle":  "New user",
+        "editTitle":    "Edit user",
+        "username":     "Username",
+        "password":     "Password",
+        "role":         "Role",
+        "branch":       "Branch",
+        "branchNone":   "No branch",
+        "submitCreate": "Create",
+        "submitEdit":   "Save changes",
+        "submitting":   "Saving..."
+      },
+      "table": {
+        "username":  "Username",
+        "role":      "Role",
+        "branch":    "Branch",
+        "createdAt": "Created"
+      },
+      "delete": {
+        "title":       "Delete user",
+        "description": "Delete {{username}}? This action cannot be undone.",
+        "submit":      "Delete",
+        "submitting":  "Deleting..."
+      },
+      "toast": {
+        "created": "User created successfully",
+        "updated": "User updated successfully",
+        "deleted": "User deleted successfully"
+      }
+    },
+    "branches": {
+      "title":  "Branches",
+      "newCta": "New branch",
+      "empty":  "No branches registered.",
+      "form": {
+        "createTitle":  "New branch",
+        "editTitle":    "Edit branch",
+        "name":         "Name",
+        "submitCreate": "Create",
+        "submitEdit":   "Save changes",
+        "submitting":   "Saving..."
+      },
+      "table": {
+        "name": "Name"
+      },
+      "delete": {
+        "title":       "Delete branch",
+        "description": "Delete {{name}}? This action cannot be undone.",
+        "warning":     "Make sure the branch has no open shifts. The server will reject the deletion if it does.",
+        "submit":      "Delete",
+        "submitting":  "Deleting..."
+      },
+      "toast": {
+        "created": "Branch created successfully",
+        "updated": "Branch updated successfully",
+        "deleted": "Branch deleted successfully"
+      }
     }
   },
   "settings": {

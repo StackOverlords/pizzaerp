@@ -37,6 +37,12 @@
       "viewCategories":  "Menú: Categorías",
       "createDish":      "Menú: Nuevo plato",
       "createCategory":  "Menú: Nueva categoría"
+    },
+    "staff": {
+      "viewUsers":     "Personal: Usuarios",
+      "viewBranches":  "Personal: Sucursales",
+      "createUser":    "Personal: Nuevo usuario",
+      "createBranch":  "Personal: Nueva sucursal"
     }
   },
   "app": {
@@ -47,6 +53,12 @@
   },
   "prompt": {
     "title": "Ingresá los datos"
+  },
+  "common": {
+    "edit":   "Editar",
+    "delete": "Eliminar",
+    "cancel": "Cancelar",
+    "loading": "Cargando..."
   },
   "confirm": {
     "title": "¿Estás seguro?",
@@ -161,6 +173,76 @@
       "initialCash": "Efectivo inicial",
       "elapsed":     "Tiempo abierto",
       "closeCta":    "Cerrar turno"
+    }
+  },
+  "staff": {
+    "adminOnly": "Solo disponible para administradores",
+    "roles": {
+      "ADMIN":   "Admin",
+      "CAJERO":  "Cajero",
+      "HORNERO": "Hornero"
+    },
+    "users": {
+      "title":  "Usuarios",
+      "newCta": "Nuevo usuario",
+      "empty":  "No hay usuarios registrados.",
+      "form": {
+        "createTitle":  "Nuevo usuario",
+        "editTitle":    "Editar usuario",
+        "username":     "Usuario",
+        "password":     "Contraseña",
+        "role":         "Rol",
+        "branch":       "Sucursal",
+        "branchNone":   "Sin sucursal",
+        "submitCreate": "Crear",
+        "submitEdit":   "Guardar cambios",
+        "submitting":   "Guardando..."
+      },
+      "table": {
+        "username":  "Usuario",
+        "role":      "Rol",
+        "branch":    "Sucursal",
+        "createdAt": "Creado"
+      },
+      "delete": {
+        "title":       "Eliminar usuario",
+        "description": "¿Eliminar a {{username}}? Esta acción no se puede deshacer.",
+        "submit":      "Eliminar",
+        "submitting":  "Eliminando..."
+      },
+      "toast": {
+        "created": "Usuario creado correctamente",
+        "updated": "Usuario actualizado correctamente",
+        "deleted": "Usuario eliminado correctamente"
+      }
+    },
+    "branches": {
+      "title":  "Sucursales",
+      "newCta": "Nueva sucursal",
+      "empty":  "No hay sucursales registradas.",
+      "form": {
+        "createTitle":  "Nueva sucursal",
+        "editTitle":    "Editar sucursal",
+        "name":         "Nombre",
+        "submitCreate": "Crear",
+        "submitEdit":   "Guardar cambios",
+        "submitting":   "Guardando..."
+      },
+      "table": {
+        "name": "Nombre"
+      },
+      "delete": {
+        "title":       "Eliminar sucursal",
+        "description": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
+        "warning":     "Asegurate de que la sucursal no tenga turnos abiertos. El servidor rechazará la eliminación si los hay.",
+        "submit":      "Eliminar",
+        "submitting":  "Eliminando..."
+      },
+      "toast": {
+        "created": "Sucursal creada correctamente",
+        "updated": "Sucursal actualizada correctamente",
+        "deleted": "Sucursal eliminada correctamente"
+      }
     }
   },
   "settings": {

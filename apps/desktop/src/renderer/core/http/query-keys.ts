@@ -29,6 +29,15 @@ export const queryKeys = {
   },
 
   users: {
+    all:      () => ['users'] as const,
+    list:     () => ['users', 'list'] as const,
+    /** @deprecated Use queryKeys.users.list() — kept for shifts.useStaffOptions backward compat. Both are invalidated by users.all(). */
     cashiers: () => ['users', 'cashiers'] as const,
+  },
+
+  branches: {
+    all:    () => ['branches'] as const,
+    list:   () => ['branches', 'list'] as const,
+    detail: (id: string) => ['branches', 'detail', id] as const,
   },
 }

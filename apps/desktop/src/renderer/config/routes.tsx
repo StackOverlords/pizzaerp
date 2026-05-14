@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { Navigate } from 'react-router'
 import {
+  Building2,
   ChartBar,
   ClipboardList,
   Clock,
@@ -22,6 +23,8 @@ const OrdersListPage = lazy(() => import('@/pages/OrdersList'))
 const OrdersNewPage = lazy(() => import('@/pages/OrdersNew'))
 const MenuProductsPage = lazy(() => import('@/pages/MenuProducts'))
 const MenuCategoriesPage = lazy(() => import('@/pages/MenuCategories'))
+const StaffUsersPage = lazy(() => import('@/pages/StaffUsers'))
+const StaffBranchesPage = lazy(() => import('@/pages/StaffBranches'))
 
 const Placeholder = ({ label }: { label: string }) => (
   <div className="p-6 text-foreground text-sm text-muted-foreground">{label}</div>
@@ -105,9 +108,32 @@ export const routes: RouteConfig[] = [
     path: '/staff',
     label: 'Personal',
     icon: Users,
-    element: <Placeholder label="Personal" />,
+    element: <Navigate to="/staff/users" replace />,
     order: 3,
-    tabConfig: { singleton: true },
+    children: [
+      {
+        id: 'staff.users',
+        path: '/staff/users',
+        label: 'Usuarios',
+        icon: Users,
+        element: <StaffUsersPage />,
+        component: StaffUsersPage,
+        roles: ['ADMIN'],
+        order: 0,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'staff.branches',
+        path: '/staff/branches',
+        label: 'Sucursales',
+        icon: Building2,
+        element: <StaffBranchesPage />,
+        component: StaffBranchesPage,
+        roles: ['ADMIN'],
+        order: 1,
+        tabConfig: { singleton: true, closable: true },
+      },
+    ],
   },
   {
     id: 'reports',

@@ -72,6 +72,20 @@ export type AppEvents = {
   // Menú — diálogos (desde comandos)
   'menu.dishDialog.requested':     { mode: 'create' | 'edit'; dishId?: string }
   'menu.categoryDialog.requested': { mode: 'create' | 'edit'; categoryId?: string }
+
+  // Staff — usuarios
+  'staff.user.created': { userId: string; username: string }
+  'staff.user.updated': { userId: string }
+  'staff.user.deleted': { userId: string }
+
+  // Staff — sucursales
+  'staff.branch.created': { branchId: string; name: string }
+  'staff.branch.updated': { branchId: string }
+  'staff.branch.deleted': { branchId: string }
+
+  // Staff — diálogos (desde comandos)
+  'staff.userDialog.requested':   { mode: 'create' | 'edit'; userId?: string }
+  'staff.branchDialog.requested': { mode: 'create' | 'edit'; branchId?: string }
 }
 
 export const eventBus = new EventBusClass<AppEvents>()
