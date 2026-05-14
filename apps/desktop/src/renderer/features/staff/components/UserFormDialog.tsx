@@ -61,7 +61,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
       },
     ])
 
-    async function handleCreate(data: CreateUserFormInput) {
+    const handleCreate = async (data: CreateUserFormInput) => {
       await createMutation.mutateAsync({
         username: data.username,
         password: data.password,
