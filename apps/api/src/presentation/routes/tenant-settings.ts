@@ -6,7 +6,7 @@ import { resolveTenantSchema, tenantSchemaService } from '../../shared/container
 import { prisma } from '../../infrastructure/database/prisma'
 import { PrismaTenantSettingsRepository } from '../../infrastructure/database/repositories/prisma-tenant-settings-repository'
 
-const ALLOWED_KEYS = ['require_pin_for_cancel', 'require_pin_for_discount'] as const
+const ALLOWED_KEYS = ['require_pin_for_cancel', 'require_pin_for_discount', 'blind_close_enabled'] as const
 type AllowedKey = (typeof ALLOWED_KEYS)[number]
 
 export async function tenantSettingsRoutes(fastify: FastifyInstance) {
@@ -23,6 +23,7 @@ export async function tenantSettingsRoutes(fastify: FastifyInstance) {
             properties: {
               requirePinForCancel:   { type: 'boolean' },
               requirePinForDiscount: { type: 'boolean' },
+              blindCloseEnabled:     { type: 'boolean' },
             },
           },
         },
@@ -38,6 +39,7 @@ export async function tenantSettingsRoutes(fastify: FastifyInstance) {
       return {
         requirePinForCancel:   (all['require_pin_for_cancel']   ?? 'true') === 'true',
         requirePinForDiscount: (all['require_pin_for_discount'] ?? 'true') === 'true',
+        blindCloseEnabled:     (all['blind_close_enabled']      ?? 'true') === 'true',
       }
     },
   )

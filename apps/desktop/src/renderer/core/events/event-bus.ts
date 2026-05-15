@@ -55,8 +55,9 @@ export type AppEvents = {
   'order.discountDialog.requested': { orderId: string }
 
   // Turnos
-  'shifts.openDialog.requested':  undefined
-  'shifts.closeDialog.requested': undefined
+  'shifts.openDialog.requested':      undefined
+  'shifts.closeDialog.requested':     undefined
+  'shifts.movementDialog.requested':  { type: 'INGRESO' | 'RETIRO' }
 
   // Menú — platos
   'menu.dish.created':    { dishId: string; name: string }
@@ -83,6 +84,22 @@ export type AppEvents = {
   'staff.branch.updated': { branchId: string }
   'staff.branch.deleted': { branchId: string }
 
+  // Menú — ingredientes
+  'menu.ingredient.created':    { ingredientId: string; name: string }
+  'menu.ingredient.updated':    { ingredientId: string }
+  'menu.ingredient.deactivated': { ingredientId: string }
+
+  // Menú — diálogos ingredientes (desde comandos)
+  'menu.ingredientDialog.requested': { mode: 'create' | 'edit'; ingredientId?: string }
+
+  // Menú — combos
+  'menu.combo.created':    { comboId: string; name: string }
+  'menu.combo.updated':    { comboId: string }
+  'menu.combo.deactivated': { comboId: string }
+
+  // Menú — diálogos combos (desde comandos)
+  'menu.comboDialog.requested': { mode: 'create' | 'edit'; comboId?: string }
+
   // Staff — diálogos (desde comandos)
   'staff.userDialog.requested':   { mode: 'create' | 'edit'; userId?: string }
   'staff.branchDialog.requested': { mode: 'create' | 'edit'; branchId?: string }
@@ -91,6 +108,29 @@ export type AppEvents = {
   'branchContext.branch.selected':      { branchId: string; name: string }
   'branchContext.branch.cleared':       { reason: 'user' | 'stale' }
   'branchContext.selector.focusRequested': undefined
+
+  // Supply — tipos de insumo
+  'supply.type.created':      { id: string; name: string }
+  'supply.type.updated':      { id: string }
+  'supply.type.deactivated':  { id: string }
+
+  // Supply — transferencias
+  'supply.transfer.created':  { id: string }
+  'supply.transfer.received': { id: string }
+
+  // Supply — mermas
+  'supply.wastage.logged':    { id: string }
+
+  // Supply — cierre diario
+  'supply.closing.done':      { id: string }
+
+  // Supply — diálogos (desde comandos)
+  'supply.wastageDialog.requested': undefined
+
+  // Menú — ingredientes de plato
+  'menu.dishIngredient.added':   { dishId: string; ingredientId: string }
+  'menu.dishIngredient.updated': { dishId: string; ingredientId: string }
+  'menu.dishIngredient.removed': { dishId: string; ingredientId: string }
 }
 
 export const eventBus = new EventBusClass<AppEvents>()

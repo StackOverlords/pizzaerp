@@ -8,6 +8,8 @@ import {
   ClockArrowUp,
   History,
   LayoutDashboard,
+  Leaf,
+  Package,
   Pizza,
   Settings,
   ShoppingCart,
@@ -23,8 +25,15 @@ const OrdersListPage = lazy(() => import('@/pages/OrdersList'))
 const OrdersNewPage = lazy(() => import('@/pages/OrdersNew'))
 const MenuProductsPage = lazy(() => import('@/pages/MenuProducts'))
 const MenuCategoriesPage = lazy(() => import('@/pages/MenuCategories'))
+const MenuCombosPage = lazy(() => import('@/pages/MenuCombos'))
+const MenuIngredientsPage = lazy(() => import('@/pages/MenuIngredients'))
 const StaffUsersPage = lazy(() => import('@/pages/StaffUsers'))
 const StaffBranchesPage = lazy(() => import('@/pages/StaffBranches'))
+const SupplyTypesPage = lazy(() => import('@/pages/SupplyTypes'))
+const SupplyTransfersPage = lazy(() => import('@/pages/SupplyTransfers'))
+const SupplyWastagesPage = lazy(() => import('@/pages/SupplyWastages'))
+const SupplyClosingsPage = lazy(() => import('@/pages/SupplyClosings'))
+const ReportsPage = lazy(() => import('@/pages/Reports'))
 
 const Placeholder = ({ label }: { label: string }) => (
   <div className="p-6 text-foreground text-sm text-muted-foreground">{label}</div>
@@ -101,6 +110,75 @@ export const routes: RouteConfig[] = [
         order: 1,
         tabConfig: { singleton: true, closable: true },
       },
+      {
+        id: 'menu.combos',
+        path: '/menu/combos',
+        label: 'Combos',
+        element: <MenuCombosPage />,
+        component: MenuCombosPage,
+        roles: ['ADMIN'],
+        order: 2,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'menu.ingredients',
+        path: '/menu/ingredients',
+        label: 'Ingredientes',
+        icon: Leaf,
+        element: <MenuIngredientsPage />,
+        component: MenuIngredientsPage,
+        roles: ['ADMIN'],
+        order: 3,
+        tabConfig: { singleton: true, closable: true },
+      },
+    ],
+  },
+  {
+    id: 'supply',
+    path: '/supply',
+    label: 'Insumos',
+    icon: Package,
+    element: <Navigate to="/supply/types" replace />,
+    order: 3,
+    children: [
+      {
+        id: 'supply.types',
+        path: '/supply/types',
+        label: 'Tipos',
+        element: <SupplyTypesPage />,
+        component: SupplyTypesPage,
+        roles: ['ADMIN'],
+        order: 0,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'supply.transfers',
+        path: '/supply/transfers',
+        label: 'Transferencias',
+        element: <SupplyTransfersPage />,
+        component: SupplyTransfersPage,
+        order: 1,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'supply.wastages',
+        path: '/supply/wastages',
+        label: 'Mermas',
+        element: <SupplyWastagesPage />,
+        component: SupplyWastagesPage,
+        order: 2,
+        tabConfig: { singleton: true, closable: true },
+      },
+      {
+        id: 'supply.closings',
+        path: '/supply/closings',
+        label: 'Cierre diario',
+        element: <SupplyClosingsPage />,
+        component: SupplyClosingsPage,
+        roles: ['ADMIN'],
+        order: 3,
+        tabConfig: { singleton: true, closable: true },
+      },
     ],
   },
   {
@@ -109,7 +187,7 @@ export const routes: RouteConfig[] = [
     label: 'Personal',
     icon: Users,
     element: <Navigate to="/staff/users" replace />,
-    order: 3,
+    order: 4,
     children: [
       {
         id: 'staff.users',
@@ -140,9 +218,11 @@ export const routes: RouteConfig[] = [
     path: '/reports',
     label: 'Reportes',
     icon: ChartBar,
-    element: <Placeholder label="Reportes" />,
-    order: 4,
-    tabConfig: { singleton: true },
+    element: <ReportsPage />,
+    component: ReportsPage,
+    roles: ['ADMIN'],
+    order: 5,
+    tabConfig: { singleton: true, closable: true },
   },
   {
     id: 'shifts',
@@ -150,7 +230,7 @@ export const routes: RouteConfig[] = [
     label: 'Turnos',
     icon: Clock,
     element: <Navigate to="/shifts/current" replace />,
-    order: 5,
+    order: 6,
     children: [
       {
         id: 'shifts.current',

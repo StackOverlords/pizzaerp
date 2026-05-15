@@ -5,6 +5,7 @@ import { createTenantClient } from '../../infrastructure/database/tenant-client.
 import { PrismaOrderRepository } from '../../infrastructure/database/repositories/prisma-order-repository'
 import { PrismaShiftRepository } from '../../infrastructure/database/repositories/prisma-shift-repository'
 import { PrismaDishRepository } from '../../infrastructure/database/repositories/prisma-dish-repository'
+import { PrismaDishIngredientRepository } from '../../infrastructure/database/repositories/prisma-dish-ingredient-repository'
 import { PrismaPaymentRepository } from '../../infrastructure/database/repositories/prisma-payment-repository'
 import { createCreateOrderUseCase } from '../../application/orders/create-order.use-case'
 import { createGetOrderUseCase } from '../../application/orders/get-order.use-case'
@@ -38,6 +39,8 @@ interface CreateOrderBody {
     dishId: string
     quantity: number
     notes?: string
+    extras?: Array<{ dishIngredientId: string; quantity: number }>
+    exclusions?: Array<{ dishIngredientId: string }>
   }>
   notes?: string
   branchId?: string
@@ -166,6 +169,27 @@ export async function orderRoutes(fastify: FastifyInstance) {
                   dishId: { type: 'string' },
                   quantity: { type: 'integer', minimum: 1 },
                   notes: { type: 'string' },
+                  extras: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['dishIngredientId', 'quantity'],
+                      properties: {
+                        dishIngredientId: { type: 'string' },
+                        quantity: { type: 'number', exclusiveMinimum: 0 },
+                      },
+                    },
+                  },
+                  exclusions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['dishIngredientId'],
+                      properties: {
+                        dishIngredientId: { type: 'string' },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -190,10 +214,12 @@ export async function orderRoutes(fastify: FastifyInstance) {
         const orderRepo = new PrismaOrderRepository(db, schema)
         const shiftRepo = new PrismaShiftRepository(db, schema)
         const dishRepo = new PrismaDishRepository(db, schema)
+        const dishIngredientRepo = new PrismaDishIngredientRepository(db, schema)
         const createOrder = createCreateOrderUseCase({
           orderRepository: orderRepo,
           shiftRepository: shiftRepo,
           dishRepository: dishRepo,
+          dishIngredientRepository: dishIngredientRepo,
         })
         const order = await createOrder({
           userId: user_id,

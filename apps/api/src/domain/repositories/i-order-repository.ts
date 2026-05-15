@@ -1,6 +1,19 @@
 import type { Order, OrderWithItems } from '../entities/order'
 import type { OrderStatus } from '../entities/order'
 
+export interface CreateOrderItemExtraData {
+  dishIngredientId: string
+  ingredientName: string
+  quantity: number
+  unitCost: number
+  subtotal: number
+}
+
+export interface CreateOrderItemExclusionData {
+  dishIngredientId: string
+  ingredientName: string
+}
+
 export interface CreateOrderItemData {
   dishId: string | null
   dishName: string
@@ -8,6 +21,8 @@ export interface CreateOrderItemData {
   quantity: number
   subtotal: number
   notes?: string
+  extras?: CreateOrderItemExtraData[]
+  exclusions?: CreateOrderItemExclusionData[]
 }
 
 export interface CreateOrderData {

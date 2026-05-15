@@ -1,6 +1,69 @@
 Nunca pongas en los commits: Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
-# MaxPizza — Conventions
+# FoodERP — Conventions
+
+---
+
+## Análisis de producto — FoodERP vs SICAR
+
+SICAR es el POS #1 de México para restaurantes. Lo usamos como referencia de alcance, no como modelo a copiar — nuestra arquitectura y UX son superiores.
+
+### Lo que tenemos y SICAR también tiene ✅
+- POS / Órdenes (caja rápida)
+- Gestión de menú (categorías, platillos, ingredientes, combos)
+- Turnos + corte de caja (el nuestro con blind closure, más limpio)
+- Movimientos de caja (INGRESO/RETIRO)
+- Gestión de usuarios y roles
+- Multi-sucursal con aislamiento por schema
+- Transferencias de insumos entre sucursales con reconciliación
+- PIN de autorización por operación (mejor que el de ellos)
+
+### Donde los superamos 🚀
+- Clean Architecture real (ellos tienen monolito .NET legacy)
+- Multi-tenant SaaS (ellos venden licencias por instalación)
+- Blind closure (cajero no ve monto esperado)
+- Combos multi-slot con opciones por slot
+- PIN granular por operación vs PIN de acceso
+- Transferencias con reconciliación enviado/recibido
+- Stack moderno (Electron + React + TypeScript)
+
+### Gaps respecto a SICAR ❌ — roadmap futuro
+
+| Gap | Impacto | Notas |
+|---|---|---|
+| **Mesas y Zonas** | 🔴 Alto | Sin esto no atendemos restaurantes de salón. Requiere: tabla `tables`, columna `table_id` en orders, tipo de orden (MESA/TAKEOUT/DELIVERY) |
+| **Monitor de cocina (KDS)** | 🔴 Alto | Requiere `kitchen_status` en `order_items` + pantalla separada para cocina |
+| **Reportes de ventas** | 🔴 Alto | Hoy no existe "¿cuánto vendí hoy?". Solo tenemos reporte de transferencias |
+| **Personalizaciones de orden (extras/exclusiones)** | 🔴 Alto | SICAR lo tiene: al agregar un platillo se ven sus ingredientes y se quitan/agregan. **DB ya modelada** (`order_item_extras`, `order_item_exclusions`, `dish_ingredients.behavior`). Solo falta: use case, API route, UI en CreateOrderForm. Dos niveles: (1) estructurado por ingredientes config del plato, (2) nota libre por ítem (ya funciona). |
+| **Clientes** | 🟡 Medio | Tabla `customers`, `customer_id` en orders, historial de compras |
+| **Comandero móvil** | 🟡 Medio | App web o nativa para meseros — separada del desktop del cajero |
+| **Devoluciones** | 🟢 Bajo | Flujo de refund sobre órdenes pagadas |
+| **Facturación CFDI** | 🟢 Bajo | Muy específico México, plugin futuro |
+| **Reservaciones** | 🟢 Bajo | Depende de que existan mesas primero |
+
+### Backend sin frontend — deuda actual
+
+Módulos completamente implementados en API sin ninguna pantalla en desktop:
+
+| Módulo | Rutas API | Frontend |
+|---|---|---|
+| **Combos** | `/combos` completo (CRUD + slots + opciones) | ❌ Sin página |
+| **Insumos** | `/supply-types`, `/supply-transfers`, `/supply-wastages`, `/supply-closings` | ❌ Sin páginas |
+| **Reportes** | `/reports/supply-transfers` | ❌ Placeholder vacío |
+
+### Estado del DDL — qué falta en la base de datos para los gaps futuros
+
+El DDL actual **no tiene**:
+- `table_id` en `orders` — necesario para mesas
+- `order_type` en `orders` — (MESA / TAKEOUT / DELIVERY)
+- `kitchen_status` en `order_items` — (PENDING / PREPARING / READY) para KDS
+- Tabla `customers` — para gestión de clientes
+- Tabla `tables` / `zones` — para mapa de salón
+- Tabla `reservations`
+
+Estas columnas/tablas no deben agregarse hasta que se diseñe el módulo correspondiente.
+
+---
 
 ---
 

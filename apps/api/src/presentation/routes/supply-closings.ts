@@ -15,11 +15,13 @@ interface CloseBody {
   soldCount: number
   actualRemaining: number
   notes?: string | null
+  branchId?: string
 }
 
 interface ListQuery {
   from?: string
   to?: string
+  branchId?: string
 }
 
 const closureSchema = {
@@ -52,7 +54,7 @@ const summaryItemSchema = {
 
 export async function supplyClosingRoutes(fastify: FastifyInstance) {
   // GET /supply-closings/summary — preview de valores calculados antes de cerrar (ADMIN)
-  fastify.get<{ Querystring: { date: string } }>(
+  fastify.get<{ Querystring: { date: string; branchId?: string } }>(
     '/summary',
     {
       schema: {
@@ -61,7 +63,10 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
         querystring: {
           type: 'object',
           required: ['date'],
-          properties: { date: { type: 'string', format: 'date' } },
+          properties: {
+            date: { type: 'string', format: 'date' },
+            branchId: { type: 'string' },
+          },
         },
         response: { 200: { type: 'array', items: summaryItemSchema } },
         security: [{ bearerAuth: [] }],
@@ -69,14 +74,17 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, authorize([UserRole.ADMIN])],
     },
     async (request) => {
-      const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.query.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaSupplyDayClosureRepository(db, schema)
-        return repo.getSummary(branch_id, new Date(request.query.date))
+        return repo.getSummary(effectiveBranchId, new Date(request.query.date))
       } finally {
         await db.$disconnect()
       }
@@ -99,6 +107,7 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
             soldCount: { type: 'integer', minimum: 0 },
             actualRemaining: { type: 'integer', minimum: 0 },
             notes: { type: 'string' },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 201: closureSchema },
@@ -107,8 +116,11 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, authorize([UserRole.ADMIN])],
     },
     async (request, reply) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.body.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -117,7 +129,7 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
         const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
         const closeSupplyDay = createCloseSupplyDayUseCase({ supplyDayClosureRepository: repo, supplyTypeRepository: supplyTypeRepo })
         const closure = await closeSupplyDay({
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           closedByUserId: user_id,
           closureDate: request.body.closureDate,
           supplyType: request.body.supplyType,
@@ -144,6 +156,7 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
           properties: {
             from: { type: 'string', format: 'date' },
             to: { type: 'string', format: 'date' },
+            branchId: { type: 'string' },
           },
         },
         response: { 200: { type: 'array', items: closureSchema } },
@@ -152,15 +165,18 @@ export async function supplyClosingRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, authorize([UserRole.ADMIN])],
     },
     async (request) => {
-      const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.query.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
         const repo = new PrismaSupplyDayClosureRepository(db, schema)
         return repo.list(
-          branch_id,
+          effectiveBranchId,
           request.query.from ? new Date(request.query.from) : undefined,
           request.query.to ? new Date(request.query.to) : undefined,
         )

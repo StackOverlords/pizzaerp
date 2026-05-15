@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Clock, Plus, Minus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { commandRegistry } from '@/core/commands/command-registry'
-import { useCurrentShift } from '@/features/shifts/api'
-import { SHIFT_STATUS } from '@/features/shifts/schemas'
-import { formatCurrency, formatDatetime } from '@/lib/format'
+import { eventBus } from '@/core/events/event-bus'
+import { useCurrentShift, useCashMovements } from '@/features/shifts/api'
+import { SHIFT_STATUS, CASH_MOVEMENT_TYPE, type CashMovementType } from '@/features/shifts/schemas'
+import { CashMovementDialog } from '@/features/shifts/components/CashMovementDialog'
+import { CashMovementList } from '@/features/shifts/components/CashMovementList'
+import { formatCurrency } from '@/lib/format'
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
@@ -34,9 +37,51 @@ function ElapsedTime({ since }: { since: Date }) {
   return <span>{formatElapsed(elapsed)}</span>
 }
 
+interface StatChipProps {
+  label: string
+  value: string
+  color?: 'green' | 'red'
+}
+
+function StatChip({ label, value, color }: StatChipProps) {
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-0.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn('text-sm font-semibold tabular-nums', {
+        'text-green-600': color === 'green',
+        'text-destructive': color === 'red',
+      })}>
+        {value}
+      </p>
+    </div>
+  )
+}
+
 export default function ShiftsCurrentPage() {
   const { t } = useTranslation()
   const { data: shift, isLoading } = useCurrentShift()
+  const [movementDialog, setMovementDialog] = useState<CashMovementType | null>(null)
+
+  const { data: movements = [], isLoading: movementsLoading } = useCashMovements(
+    shift?.status === SHIFT_STATUS.OPEN ? shift.id : undefined,
+  )
+
+  const { ingresoTotal, retiroTotal, movementsNet } = useMemo(() => {
+    const ing = movements
+      .filter((m) => m.type === CASH_MOVEMENT_TYPE.INGRESO)
+      .reduce((s, m) => s + m.amount, 0)
+    const ret = movements
+      .filter((m) => m.type === CASH_MOVEMENT_TYPE.RETIRO)
+      .reduce((s, m) => s + m.amount, 0)
+    return { ingresoTotal: ing, retiroTotal: ret, movementsNet: ing - ret }
+  }, [movements])
+
+  useEffect(() => {
+    const unsub = eventBus.on('shifts.movementDialog.requested', ({ type }) => {
+      setMovementDialog(type)
+    })
+    return unsub
+  }, [])
 
   if (isLoading) {
     return (
@@ -61,43 +106,85 @@ export default function ShiftsCurrentPage() {
   }
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-green-600">
-            <Clock size={18} />
-            {t('shifts.indicator.open', { time: shift.openedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">{t('shifts.current.opened')}</p>
-              <p className="font-medium">{formatDatetime(shift.openedAt)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t('shifts.current.initialCash')}</p>
-              <p className="font-medium">{formatCurrency(shift.initialCash)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t('shifts.current.elapsed')}</p>
-              <p className="font-medium">
-                <ElapsedTime since={shift.openedAt} />
-              </p>
-            </div>
+    <div className="p-6 space-y-4">
+
+      {/* Header strip */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-green-600">
+            <Clock size={15} />
+            <span className="text-sm font-medium">Turno activo</span>
           </div>
+          <Separator orientation="vertical" className="h-4" />
+          <span className="text-sm text-muted-foreground">
+            Desde las {shift.openedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <span className="font-mono text-sm text-muted-foreground">
+            · <ElapsedTime since={shift.openedAt} />
+          </span>
+        </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => commandRegistry.execute('shifts.action.closeShift')}
+        >
+          {t('shifts.current.closeCta')}
+        </Button>
+      </div>
 
-          <Separator />
+      {/* Stat chips */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatChip label="Caja inicial" value={formatCurrency(shift.initialCash)} />
+        <StatChip
+          label="Ingresos"
+          value={formatCurrency(ingresoTotal)}
+          color={ingresoTotal > 0 ? 'green' : undefined}
+        />
+        <StatChip
+          label="Retiros"
+          value={formatCurrency(retiroTotal)}
+          color={retiroTotal > 0 ? 'red' : undefined}
+        />
+        <StatChip
+          label="Neto movimientos"
+          value={`${movementsNet >= 0 ? '+' : ''}${formatCurrency(movementsNet)}`}
+          color={movementsNet > 0 ? 'green' : movementsNet < 0 ? 'red' : undefined}
+        />
+      </div>
 
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={() => commandRegistry.execute('shifts.action.closeShift')}
-          >
-            {t('shifts.current.closeCta')}
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Movements section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Movimientos de caja</h3>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setMovementDialog(CASH_MOVEMENT_TYPE.INGRESO)}
+            >
+              <Plus size={13} className="mr-1" />
+              Ingreso
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setMovementDialog(CASH_MOVEMENT_TYPE.RETIRO)}
+            >
+              <Minus size={13} className="mr-1" />
+              Retiro
+            </Button>
+          </div>
+        </div>
+        <CashMovementList movements={movements} isLoading={movementsLoading} />
+      </div>
+
+      {movementDialog !== null && (
+        <CashMovementDialog
+          open={movementDialog !== null}
+          onOpenChange={(o) => { if (!o) setMovementDialog(null) }}
+          type={movementDialog}
+        />
+      )}
     </div>
   )
 }

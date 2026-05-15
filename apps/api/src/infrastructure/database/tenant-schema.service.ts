@@ -106,6 +106,19 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     closed_at           TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
+  `CREATE TABLE IF NOT EXISTS "${s}".cash_movements (
+    id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    shift_id            TEXT NOT NULL REFERENCES "${s}".shifts(id),
+    type                TEXT NOT NULL CHECK (type IN ('INGRESO', 'RETIRO')),
+    amount              NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    reason              TEXT NOT NULL,
+    created_by_user_id  TEXT NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_cash_movements_shift_created
+  ON "${s}".cash_movements (shift_id, created_at DESC)`,
+
   `CREATE TABLE IF NOT EXISTS "${s}".orders (
     id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_number    INT NOT NULL DEFAULT 1,
@@ -291,6 +304,20 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
      END IF;
    END $$`,
 
+  // Migración idempotente: ON DELETE SET NULL en dish_ingredient_id de order_item_extras
+  `ALTER TABLE IF EXISTS "${s}".order_item_extras
+     DROP CONSTRAINT IF EXISTS order_item_extras_dish_ingredient_id_fkey`,
+  `ALTER TABLE IF EXISTS "${s}".order_item_extras
+     ADD CONSTRAINT order_item_extras_dish_ingredient_id_fkey
+     FOREIGN KEY (dish_ingredient_id) REFERENCES "${s}".dish_ingredients(id) ON DELETE SET NULL`,
+
+  // Migración idempotente: ON DELETE SET NULL en dish_ingredient_id de order_item_exclusions
+  `ALTER TABLE IF EXISTS "${s}".order_item_exclusions
+     DROP CONSTRAINT IF EXISTS order_item_exclusions_dish_ingredient_id_fkey`,
+  `ALTER TABLE IF EXISTS "${s}".order_item_exclusions
+     ADD CONSTRAINT order_item_exclusions_dish_ingredient_id_fkey
+     FOREIGN KEY (dish_ingredient_id) REFERENCES "${s}".dish_ingredients(id) ON DELETE SET NULL`,
+
   // ─── CONFIGURACIÓN DEL TENANT ────────────────────────────────────────────
 
   `CREATE TABLE IF NOT EXISTS "${s}".tenant_settings (
@@ -300,7 +327,8 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
 
   `INSERT INTO "${s}".tenant_settings (key, value) VALUES
     ('require_pin_for_cancel',   'true'),
-    ('require_pin_for_discount', 'true')
+    ('require_pin_for_discount', 'true'),
+    ('blind_close_enabled',      'true')
    ON CONFLICT (key) DO NOTHING`,
 ]
 

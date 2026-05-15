@@ -86,14 +86,22 @@ export type OrderListPage = z.infer<typeof orderListPageSchema>
 
 // ── Form input schemas ─────────────────────────────────────────────────────────
 
+export const orderItemInputSchema = z.object({
+  dishId:   z.string({ message: 'Requerido' }),
+  quantity: z.number().int().positive('Cantidad debe ser positiva'),
+  notes:    z.string().max(500).optional(),
+  extras: z.array(z.object({
+    dishIngredientId: z.string(),
+    quantity:         z.number().positive(),
+  })).optional(),
+  exclusions: z.array(z.object({
+    dishIngredientId: z.string(),
+  })).optional(),
+})
+export type OrderItemInput = z.infer<typeof orderItemInputSchema>
+
 export const createOrderInputSchema = z.object({
-  items: z.array(
-    z.object({
-      dishId:   z.string({ message: 'Requerido' }),
-      quantity: z.number().int().positive('Cantidad debe ser positiva'),
-      notes:    z.string().max(500).optional(),
-    })
-  ).min(1, 'Agregá al menos un platillo'),
+  items: z.array(orderItemInputSchema).min(1, 'Agregá al menos un platillo'),
   notes: z.string().max(500).optional(),
 })
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>

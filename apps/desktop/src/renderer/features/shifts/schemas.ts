@@ -1,5 +1,29 @@
 import { z } from 'zod'
 
+export const CASH_MOVEMENT_TYPE = {
+  INGRESO: 'INGRESO',
+  RETIRO:  'RETIRO',
+} as const
+export type CashMovementType = (typeof CASH_MOVEMENT_TYPE)[keyof typeof CASH_MOVEMENT_TYPE]
+
+export const cashMovementSchema = z.object({
+  id:              z.string(),
+  shiftId:         z.string(),
+  type:            z.enum([CASH_MOVEMENT_TYPE.INGRESO, CASH_MOVEMENT_TYPE.RETIRO]),
+  amount:          z.number(),
+  reason:          z.string(),
+  createdByUserId: z.string(),
+  createdAt:       z.coerce.date(),
+})
+export type CashMovement = z.infer<typeof cashMovementSchema>
+
+export const createCashMovementInputSchema = z.object({
+  type:   z.enum([CASH_MOVEMENT_TYPE.INGRESO, CASH_MOVEMENT_TYPE.RETIRO]),
+  amount: z.number({ error: 'Requerido' }).finite().positive('Debe ser mayor a 0'),
+  reason: z.string().trim().min(1, 'Requerido').max(200, 'Máximo 200 caracteres'),
+})
+export type CreateCashMovementInput = z.infer<typeof createCashMovementInputSchema>
+
 export const SHIFT_STATUS = { OPEN: 'OPEN', CLOSED: 'CLOSED' } as const
 export type ShiftStatus = (typeof SHIFT_STATUS)[keyof typeof SHIFT_STATUS]
 

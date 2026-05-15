@@ -65,7 +65,7 @@ function Shell() {
     >
       <RouterBinder />
       <InitialTab />
-      <TitleBar title="MaxPizza" />
+      <TitleBar />
       <SidebarProvider
         className="flex-1 min-h-0"
         style={{ '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}

@@ -127,6 +127,21 @@ function PinToggles() {
           disabled={updateSetting.isPending}
         />
       </div>
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <p className="text-sm">Modo ciego al cerrar turno</p>
+          <p className="text-xs text-muted-foreground">
+            Si está activo, el cajero no ve el efectivo esperado antes de declarar. Desactivarlo
+            permite validar el conteo contra el sistema antes de cerrar (reduce el control anti-fraude).
+          </p>
+        </div>
+        <Switch
+          checked={settings?.blindCloseEnabled ?? true}
+          onCheckedChange={(v) => toggle('blind_close_enabled', v)}
+          disabled={updateSetting.isPending}
+        />
+      </div>
     </div>
   )
 }

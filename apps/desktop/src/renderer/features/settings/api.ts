@@ -7,6 +7,7 @@ import { useAuthStore } from '@/core/auth/store'
 const tenantSettingsSchema = z.object({
   requirePinForCancel:   z.boolean(),
   requirePinForDiscount: z.boolean(),
+  blindCloseEnabled:     z.boolean(),
 })
 export type TenantSettings = z.infer<typeof tenantSettingsSchema>
 

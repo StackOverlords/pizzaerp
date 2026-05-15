@@ -17,17 +17,20 @@ interface CreateBody {
   transferDate: string
   items: { supplyType: string; quantitySent: number; notes?: string | null }[]
   notes?: string | null
+  branchId?: string
 }
 
 interface ListQuery {
   status?: string
   from?: string
   to?: string
+  branchId?: string
 }
 
 interface ReceiveBody {
   items: { supplyType: string; quantityReceived: number; notes?: string | null }[]
   notes?: string | null
+  branchId?: string
 }
 
 const itemSchema = {
@@ -86,6 +89,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
                 },
               },
             },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 201: transferSchema },
@@ -94,8 +98,11 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, authorize([UserRole.ADMIN])],
     },
     async (request, reply) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.body.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -104,7 +111,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
         const supplyTypeRepo = new PrismaSupplyTypeRepository(db, schema)
         const createTransfer = createCreateSupplyTransferUseCase({ supplyTransferRepository: repo, supplyTypeRepository: supplyTypeRepo })
         const transfer = await createTransfer({
-          fromBranchId: branch_id,
+          fromBranchId: effectiveBranchId,
           toBranchId: request.body.toBranchId,
           sentByUserId: user_id,
           transferDate: request.body.transferDate,
@@ -148,6 +155,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
                 },
               },
             },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 200: transferSchema },
@@ -156,8 +164,11 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, authorize([UserRole.ADMIN])],
     },
     async (request) => {
-      const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.body.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -166,7 +177,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
         const receiveTransfer = createReceiveSupplyTransferUseCase({ supplyTransferRepository: repo })
         return receiveTransfer({
           transferId: request.params.id,
-          receivingBranchId: branch_id,
+          receivingBranchId: effectiveBranchId,
           items: request.body.items,
           notes: request.body.notes,
         })
@@ -189,6 +200,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
             status: { type: 'string', enum: ['IN_TRANSIT', 'RECEIVED'] },
             from: { type: 'string', format: 'date-time' },
             to: { type: 'string', format: 'date-time' },
+            branchId: { type: 'string' },
           },
         },
         response: { 200: { type: 'array', items: transferSchema } },
@@ -197,8 +209,11 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request) => {
-      const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.query.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -206,7 +221,7 @@ export async function supplyTransferRoutes(fastify: FastifyInstance) {
         const repo = new PrismaSupplyTransferRepository(db, schema)
         const listTransfers = createListSupplyTransfersUseCase({ supplyTransferRepository: repo })
         return listTransfers({
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           status: request.query.status as SupplyTransferStatus | undefined,
           from: request.query.from ? new Date(request.query.from) : undefined,
           to: request.query.to ? new Date(request.query.to) : undefined,

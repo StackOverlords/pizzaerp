@@ -52,41 +52,82 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   async create(data: CreateOrderData): Promise<OrderWithItems> {
-    const orderRows = await this.db.$queryRawUnsafe<RawOrder[]>(
-      `INSERT INTO "${this.schema}".orders
-         (order_number, shift_id, branch_id, user_id, subtotal, discount_amount, total, notes)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7)
-       RETURNING id, order_number, shift_id, branch_id, user_id, status,
-                 subtotal, discount_amount, total, notes, created_at, updated_at`,
-      data.orderNumber,
-      data.shiftId,
-      data.branchId,
-      data.userId,
-      data.subtotal,
-      data.total,
-      data.notes ?? null,
-    )
-    const order = this.toOrderEntity(orderRows[0])
+    const schema = this.schema
 
-    const itemRows: RawOrderItem[] = []
-    for (const item of data.items) {
-      const rows = await this.db.$queryRawUnsafe<RawOrderItem[]>(
-        `INSERT INTO "${this.schema}".order_items
-           (order_id, dish_id, dish_name, unit_price, quantity, subtotal, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, order_id, dish_id, dish_name, unit_price, quantity, subtotal, notes, created_at`,
-        order.id,
-        item.dishId,
-        item.dishName,
-        item.unitPrice,
-        item.quantity,
-        item.subtotal,
-        item.notes ?? null,
+    return this.db.$transaction(async (tx) => {
+      const orderRows = await tx.$queryRawUnsafe<RawOrder[]>(
+        `INSERT INTO "${schema}".orders
+           (order_number, shift_id, branch_id, user_id, subtotal, discount_amount, total, notes)
+         VALUES ($1, $2, $3, $4, $5, 0, $6, $7)
+         RETURNING id, order_number, shift_id, branch_id, user_id, status,
+                   subtotal, discount_amount, total, notes, created_at, updated_at`,
+        data.orderNumber,
+        data.shiftId,
+        data.branchId,
+        data.userId,
+        data.subtotal,
+        data.total,
+        data.notes ?? null,
       )
-      itemRows.push(rows[0])
-    }
+      const order = this.toOrderEntity(orderRows[0])
 
-    return { ...order, items: itemRows.map(r => this.toItemEntity(r)) }
+      const itemRows: RawOrderItem[] = []
+      for (const item of data.items) {
+        const rows = await tx.$queryRawUnsafe<RawOrderItem[]>(
+          `INSERT INTO "${schema}".order_items
+             (order_id, dish_id, dish_name, unit_price, quantity, subtotal, notes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, order_id, dish_id, dish_name, unit_price, quantity, subtotal, notes, created_at`,
+          order.id,
+          item.dishId,
+          item.dishName,
+          item.unitPrice,
+          item.quantity,
+          item.subtotal,
+          item.notes ?? null,
+        )
+        const itemRow = rows[0]
+        itemRows.push(itemRow)
+
+        // INSERT extras (multi-row)
+        if (item.extras && item.extras.length > 0) {
+          const values: string[] = []
+          const params: unknown[] = []
+          let i = 1
+          for (const e of item.extras) {
+            values.push(`($${i}, $${i + 1}, $${i + 2}, $${i + 3}, $${i + 4}, $${i + 5})`)
+            params.push(itemRow.id, e.dishIngredientId, e.ingredientName, e.quantity, e.unitCost, e.subtotal)
+            i += 6
+          }
+          await tx.$queryRawUnsafe(
+            `INSERT INTO "${schema}".order_item_extras
+               (order_item_id, dish_ingredient_id, ingredient_name, quantity, unit_cost, subtotal)
+             VALUES ${values.join(', ')}`,
+            ...params,
+          )
+        }
+
+        // INSERT exclusions (multi-row)
+        if (item.exclusions && item.exclusions.length > 0) {
+          const values: string[] = []
+          const params: unknown[] = []
+          let i = 1
+          for (const x of item.exclusions) {
+            values.push(`($${i}, $${i + 1}, $${i + 2})`)
+            params.push(itemRow.id, x.dishIngredientId, x.ingredientName)
+            i += 3
+          }
+          await tx.$queryRawUnsafe(
+            `INSERT INTO "${schema}".order_item_exclusions
+               (order_item_id, dish_ingredient_id, ingredient_name)
+             VALUES ${values.join(', ')}`,
+            ...params,
+          )
+        }
+      }
+
+      return { ...order, items: itemRows.map(r => this.toItemEntity(r)) }
+    })
   }
 
   async applyDiscount(id: string, discountAmount: number): Promise<Order> {

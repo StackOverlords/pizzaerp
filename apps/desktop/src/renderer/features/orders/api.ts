@@ -26,6 +26,7 @@ import {
 import { z } from 'zod'
 
 export { useStaffOptions } from '@/features/shifts/api'
+export { useDishIngredients } from '@/features/menu/api'
 
 export function useOrders(filters: OrderFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)

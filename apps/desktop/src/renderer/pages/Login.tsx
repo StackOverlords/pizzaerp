@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Pizza } from 'lucide-react'
+import { Utensils } from 'lucide-react'
 import { LoginForm } from '@/features/auth/components/LoginForm'
 
 export default function LoginPage() {
@@ -16,7 +16,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="items-center text-center pb-2">
           <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Pizza size={24} />
+            <Utensils size={24} />
           </div>
           <CardTitle className="text-xl">FoodErp</CardTitle>
           <CardDescription>{t('auth.login.tagline')}</CardDescription>

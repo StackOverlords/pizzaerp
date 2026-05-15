@@ -6,7 +6,7 @@ import { notify } from '@/core/notify'
 import { useAuthStore } from '@/core/auth/store'
 import { queryClient } from '@/lib/query-client'
 import { queryKeys } from '@/core/http/query-keys'
-import { SHIFT_STATUS, type Shift } from './schemas'
+import { SHIFT_STATUS, CASH_MOVEMENT_TYPE, type Shift } from './schemas'
 
 export function registerShiftCommands() {
   commandRegistry.register(
@@ -54,6 +54,34 @@ export function registerShiftCommands() {
         return
       }
       openRoute('shifts.history')
+    },
+  )
+
+  commandRegistry.register(
+    'shifts.action.addIngreso',
+    () => i18next.t('commands.shifts.addIngreso'),
+    () => {
+      if (!useAuthStore.getState().isAuthenticated) return
+      const current = queryClient.getQueryData<Shift | null>(queryKeys.shifts.current())
+      if (current?.status !== SHIFT_STATUS.OPEN) {
+        notify(i18next.t('shifts.noOpenShift'), { type: 'info' })
+        return
+      }
+      eventBus.emit('shifts.movementDialog.requested', { type: CASH_MOVEMENT_TYPE.INGRESO })
+    },
+  )
+
+  commandRegistry.register(
+    'shifts.action.addRetiro',
+    () => i18next.t('commands.shifts.addRetiro'),
+    () => {
+      if (!useAuthStore.getState().isAuthenticated) return
+      const current = queryClient.getQueryData<Shift | null>(queryKeys.shifts.current())
+      if (current?.status !== SHIFT_STATUS.OPEN) {
+        notify(i18next.t('shifts.noOpenShift'), { type: 'info' })
+        return
+      }
+      eventBus.emit('shifts.movementDialog.requested', { type: CASH_MOVEMENT_TYPE.RETIRO })
     },
   )
 }

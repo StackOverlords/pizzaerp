@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties, MouseEvent } from 'react'
-import { Minus, Pizza, Square, X } from 'lucide-react'
+import { Minus, Square, Utensils, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { MenubarBarTitle } from '@/components/menu-bar-title'
@@ -78,7 +78,7 @@ export function TitleBar({ className }: TitleBarProps) {
         {/* Left: logo (drag zone) + menu (no-drag) */}
         <div className="flex h-full shrink-0 items-center">
           <span className="px-3 text-sm font-semibold text-foreground/70">
-            <Pizza size={16} />
+            <Utensils size={16} />
           </span>
           {showMenubar && (
             <div style={NO_DRAG_STYLE}>

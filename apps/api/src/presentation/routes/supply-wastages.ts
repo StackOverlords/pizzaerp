@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../hooks/authenticate.hook'
+import { UserRole } from '../../domain/entities/user'
 import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaSupplyWastageRepository } from '../../infrastructure/database/repositories/prisma-supply-wastage-repository'
@@ -13,11 +14,13 @@ interface CreateBody {
   quantity: number
   reason: string
   notes?: string | null
+  branchId?: string
 }
 
 interface ListQuery {
   from?: string
   to?: string
+  branchId?: string
 }
 
 const wastageSchema = {
@@ -50,6 +53,7 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
             quantity: { type: 'integer', minimum: 1 },
             reason: { type: 'string', enum: ['FELL', 'BAD_SHAPE', 'BURNED', 'CONTAMINATED', 'OTHER'] },
             notes: { type: 'string' },
+            branchId: { type: 'string', minLength: 1 },
           },
         },
         response: { 201: wastageSchema },
@@ -58,8 +62,11 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request, reply) => {
-      const { user_id, tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.body.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -71,7 +78,7 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
           supplyTypeRepository: supplyTypeRepo,
         })
         const wastage = await createWastage({
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           userId: user_id,
           supplyType: request.body.supplyType,
           quantity: request.body.quantity,
@@ -97,6 +104,7 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
           properties: {
             from: { type: 'string', format: 'date-time' },
             to: { type: 'string', format: 'date-time' },
+            branchId: { type: 'string' },
           },
         },
         response: { 200: { type: 'array', items: wastageSchema } },
@@ -105,8 +113,11 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate],
     },
     async (request) => {
-      const { tenant_id, branch_id } = request.user
-      if (!branch_id) throw Errors.badRequest('El usuario no tiene sucursal asignada')
+      const { tenant_id, branch_id, role } = request.user
+      const effectiveBranchId = role === UserRole.ADMIN
+        ? (branch_id ?? request.query.branchId ?? null)
+        : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
 
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
@@ -114,7 +125,7 @@ export async function supplyWastageRoutes(fastify: FastifyInstance) {
         const repo = new PrismaSupplyWastageRepository(db, schema)
         const listWastages = createListSupplyWastagesUseCase({ supplyWastageRepository: repo })
         return listWastages({
-          branchId: branch_id,
+          branchId: effectiveBranchId,
           from: request.query.from ? new Date(request.query.from) : undefined,
           to: request.query.to ? new Date(request.query.to) : undefined,
         })

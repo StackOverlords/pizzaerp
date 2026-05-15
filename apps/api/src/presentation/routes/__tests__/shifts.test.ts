@@ -460,3 +460,326 @@ describe('POST /api/v1/shifts/close — ADMIN branch override', () => {
     expect(res.json().message).toBe('Debe seleccionar una sucursal')
   })
 })
+
+// ─── POST /shifts/current/movements ──────────────────────────────────────────
+
+describe('POST /api/v1/shifts/current/movements', () => {
+  // Ensure the cajero has an open shift before these tests
+  beforeAll(async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+  })
+
+  afterAll(async () => {
+    // Close any open shift to leave state clean (notes required in case of difference)
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 0, declaredQrCount: 0, notes: 'cleanup' },
+    })
+  })
+
+  it('CM-01 — registra INGRESO con datos válidos → 201', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: 'Fondo de cambio' },
+    })
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.id).toBeDefined()
+    expect(body.type).toBe('INGRESO')
+    expect(body.amount).toBe(50)
+    expect(body.reason).toBe('Fondo de cambio')
+    expect(body.shiftId).toBeDefined()
+    expect(body.createdAt).toBeDefined()
+  })
+
+  it('CM-02 — registra RETIRO con datos válidos → 201', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'RETIRO', amount: 200, reason: 'Pago a proveedor' },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().type).toBe('RETIRO')
+    expect(res.json().amount).toBe(200)
+  })
+
+  it('CM-03 — amount <= 0 → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 0, reason: 'Motivo' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('CM-04 — amount negativo → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: -10, reason: 'Motivo' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('CM-05 — reason vacío → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: '' },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('CM-06 — sin token → 401', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      payload: { type: 'INGRESO', amount: 50, reason: 'Test' },
+    })
+    expect(res.statusCode).toBe(401)
+  })
+})
+
+// ─── GET /shifts/current/movements ───────────────────────────────────────────
+
+describe('GET /api/v1/shifts/current/movements', () => {
+  beforeAll(async () => {
+    // Ensure a fresh open shift exists for the cajero
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+    // Add one movement
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 30, reason: 'Lista test' },
+    })
+  })
+
+  afterAll(async () => {
+    // notes required since expectedCash = 130 but we declare 0
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 0, declaredQrCount: 0, notes: 'cleanup' },
+    })
+  })
+
+  it('CM-07 — retorna array con movimientos del turno abierto → 200', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBeGreaterThanOrEqual(1)
+    expect(body[0]).toHaveProperty('id')
+    expect(body[0]).toHaveProperty('type')
+    expect(body[0]).toHaveProperty('amount')
+  })
+
+  it('CM-08 — sin token → 401', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/current/movements',
+    })
+    expect(res.statusCode).toBe(401)
+  })
+})
+
+// ─── POST /shifts/close — fórmula con movimientos de caja ────────────────────
+
+describe('POST /api/v1/shifts/close — fórmula con movimientos de caja', () => {
+  it('CM-09 — INGRESO incrementa expectedCash', async () => {
+    // Open a fresh shift: initialCash = 100
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+    // Add INGRESO 50
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: 'Test ingreso' },
+    })
+    // Close: expectedCash = 100 + 0 (no sales) + 50 = 150
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 150, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().closure.expectedCash).toBe(150)
+    expect(res.json().closure.cashDifference).toBe(0)
+  })
+
+  it('CM-10 — RETIRO reduce expectedCash', async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+    // Add RETIRO 30
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'RETIRO', amount: 30, reason: 'Test retiro' },
+    })
+    // Close: expectedCash = 100 + 0 - 30 = 70
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 70, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().closure.expectedCash).toBe(70)
+    expect(res.json().closure.cashDifference).toBe(0)
+  })
+
+  it('CM-11 — movimientos mixtos (INGRESO + RETIRO)', async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: 'Test mixto ingreso' },
+    })
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'RETIRO', amount: 30, reason: 'Test mixto retiro' },
+    })
+    // Close: expectedCash = 100 + 0 + 50 - 30 = 120
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 120, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().closure.expectedCash).toBe(120)
+    expect(res.json().closure.cashDifference).toBe(0)
+  })
+
+  it('CM-12 — sin movimientos: fórmula regresión (sin cambio)', async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 200 },
+    })
+    // Close without movements: expectedCash = 200
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 200, declaredQrCount: 0 },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().closure.expectedCash).toBe(200)
+    expect(res.json().closure.cashDifference).toBe(0)
+  })
+})
+
+// ─── POST /shifts/current/movements — sin turno abierto ──────────────────────
+
+describe('POST /api/v1/shifts/current/movements — sin turno abierto', () => {
+  // All shifts opened/closed within CM-09..CM-12; at this point no open shift exists.
+
+  it('CM-13 — sin turno abierto → 409', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: 'Sin turno' },
+    })
+    expect(res.statusCode).toBe(409)
+  })
+
+  it('CM-14 — turno recién cerrado → 409', async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 100, declaredQrCount: 0 },
+    })
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+      payload: { type: 'INGRESO', amount: 50, reason: 'Turno cerrado' },
+    })
+    expect(res.statusCode).toBe(409)
+  })
+})
+
+// ─── GET /shifts/current/movements — turno sin movimientos ───────────────────
+
+describe('GET /api/v1/shifts/current/movements — turno sin movimientos', () => {
+  beforeAll(async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/open',
+      headers: authHeader(cajeroToken),
+      payload: { initialCash: 100 },
+    })
+  })
+
+  afterAll(async () => {
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/shifts/close',
+      headers: authHeader(cajeroToken),
+      payload: { declaredCash: 100, declaredQrCount: 0 },
+    })
+  })
+
+  it('CM-15 — turno sin movimientos → 200 con array vacío', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/shifts/current/movements',
+      headers: authHeader(cajeroToken),
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual([])
+  })
+})

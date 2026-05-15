@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { extractApiMessage } from '@/core/http/error'
-import { useCloseShift } from '../api'
+import { formatCurrency } from '@/lib/format'
+import { useTenantSettings } from '@/features/settings/api'
+import { useCloseShift, useCurrentShift, useCashMovements } from '../api'
 import { closeShiftInputSchema, type CloseShiftInput, type Closure } from '../schemas'
 import { ClosureSummary } from './ClosureSummary'
 
@@ -32,6 +34,14 @@ export function CloseShiftDialog({ open, onOpenChange }: CloseShiftDialogProps) 
   const [phaseState, setPhaseState] = useState<CloseDialogPhase>({ phase: 'form' })
   const [apiError, setApiError] = useState<string | null>(null)
   const mutation = useCloseShift()
+  const { data: settings } = useTenantSettings()
+  const { data: shift } = useCurrentShift()
+  const showPreview = settings?.blindCloseEnabled === false
+  const { data: movements = [] } = useCashMovements(showPreview && shift ? shift.id : undefined)
+  const movementsNet = movements.reduce(
+    (sum, m) => (m.type === 'INGRESO' ? sum + m.amount : sum - m.amount),
+    0,
+  )
 
   const {
     register,
@@ -84,6 +94,27 @@ export function CloseShiftDialog({ open, onOpenChange }: CloseShiftDialogProps) 
           </>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Non-blind mode: show movements summary before submit */}
+            {showPreview && movements.length > 0 && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+                <p className="text-xs text-muted-foreground">Movimientos de caja registrados</p>
+                {movements.map((m) => (
+                  <p key={m.id} className="flex justify-between">
+                    <span className="text-muted-foreground">{m.type === 'INGRESO' ? 'Ingreso' : 'Retiro'}: {m.reason}</span>
+                    <span className={m.type === 'INGRESO' ? 'text-green-600' : 'text-destructive'}>
+                      {m.type === 'INGRESO' ? '+' : '-'}{formatCurrency(m.amount)}
+                    </span>
+                  </p>
+                ))}
+                <div className="border-t pt-1 mt-1 flex justify-between font-medium">
+                  <span>Neto movimientos</span>
+                  <span className={movementsNet >= 0 ? 'text-green-600' : 'text-destructive'}>
+                    {movementsNet >= 0 ? '+' : ''}{formatCurrency(movementsNet)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Declared cash */}
             <div className="space-y-1.5">
               <label htmlFor="declaredCash" className="text-sm font-medium">

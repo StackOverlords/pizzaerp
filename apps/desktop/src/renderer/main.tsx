@@ -9,6 +9,7 @@ import { registerShiftCommands } from '@/features/shifts'
 import { registerOrderCommands } from '@/features/orders'
 import { registerMenuCommands } from '@/features/menu'
 import { registerStaffCommands } from '@/features/staff'
+import { registerSupplyCommands } from '@/features/supply'
 import { registerBranchContextCommands } from '@/features/branch-context'
 import { registerDefaultKeybindings } from '@/core/keybindings'
 import { initI18n } from '@/core/i18n'
@@ -26,6 +27,7 @@ async function bootstrap() {
   registerOrderCommands()
   registerMenuCommands()
   registerStaffCommands()
+  registerSupplyCommands()
   registerBranchContextCommands()
   registerDefaultKeybindings()
 

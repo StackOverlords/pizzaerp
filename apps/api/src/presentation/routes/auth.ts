@@ -31,7 +31,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           properties: {
             username: { type: 'string', minLength: 1, example: 'admin' },
             password: { type: 'string', minLength: 1, example: 'secreto123' },
-            slug: { type: 'string', minLength: 1, maxLength: 60, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', description: 'Solo SaaS. Omitir en Client-VPS.', example: 'maxpizza' },
+            slug: { type: 'string', minLength: 1, maxLength: 60, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', description: 'Solo SaaS. Omitir en Client-VPS.', example: 'fooderp' },
           },
         },
         response: {

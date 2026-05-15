@@ -5,10 +5,13 @@ import { resolveTenantSchema } from '../../shared/container'
 import { createTenantClient } from '../../infrastructure/database/tenant-client.factory'
 import { PrismaShiftRepository } from '../../infrastructure/database/repositories/prisma-shift-repository'
 import { PrismaShiftClosureRepository } from '../../infrastructure/database/repositories/prisma-shift-closure-repository'
+import { PrismaCashMovementRepository } from '../../infrastructure/database/repositories/prisma-cash-movement-repository'
 import { createOpenShiftUseCase } from '../../application/shifts/open-shift.use-case'
 import { createGetCurrentShiftUseCase } from '../../application/shifts/get-current-shift.use-case'
 import { createCloseShiftUseCase } from '../../application/shifts/close-shift.use-case'
 import { createListClosedShiftsUseCase } from '../../application/shifts/list-closed-shifts.use-case'
+import { createCreateCashMovementUseCase } from '../../application/cash-movements/create-cash-movement.use-case'
+import { createListCashMovementsForCurrentShiftUseCase } from '../../application/cash-movements/list-cash-movements.use-case'
 import { userRepository } from '../../shared/container'
 import { UserRole } from '../../domain/entities/user'
 import { Errors } from '../../shared/errors/app-error'
@@ -22,6 +25,13 @@ interface CloseShiftBody {
   declaredCash: number
   declaredQrCount: number
   notes?: string
+  branchId?: string
+}
+
+interface CreateCashMovementBody {
+  type: 'INGRESO' | 'RETIRO'
+  amount: number
+  reason: string
   branchId?: string
 }
 
@@ -39,6 +49,19 @@ const closureSchema = {
     qrCountDifference: { type: 'number' },
     notes: { type: ['string', 'null'] },
     closedAt: { type: 'string', format: 'date-time' },
+  },
+}
+
+const cashMovementResponseSchema = {
+  type: 'object',
+  properties: {
+    id:              { type: 'string' },
+    shiftId:         { type: 'string' },
+    type:            { type: 'string', enum: ['INGRESO', 'RETIRO'] },
+    amount:          { type: 'number' },
+    reason:          { type: 'string' },
+    createdByUserId: { type: 'string' },
+    createdAt:       { type: 'string', format: 'date-time' },
   },
 }
 
@@ -252,9 +275,14 @@ export async function shiftRoutes(fastify: FastifyInstance) {
       const schema = await resolveTenantSchema(tenant_id)
       const db = createTenantClient(schema)
       try {
-        const shiftRepo = new PrismaShiftRepository(db, schema)
-        const closureRepo = new PrismaShiftClosureRepository(db, schema)
-        const closeShift = createCloseShiftUseCase({ shiftRepository: shiftRepo, shiftClosureRepository: closureRepo })
+        const shiftRepo       = new PrismaShiftRepository(db, schema)
+        const closureRepo     = new PrismaShiftClosureRepository(db, schema)
+        const movementRepo    = new PrismaCashMovementRepository(db, schema)
+        const closeShift = createCloseShiftUseCase({
+          shiftRepository: shiftRepo,
+          shiftClosureRepository: closureRepo,
+          cashMovementRepository: movementRepo,
+        })
         return closeShift({
           userId: user_id,
           branchId: effectiveBranchId,
@@ -262,6 +290,102 @@ export async function shiftRoutes(fastify: FastifyInstance) {
           declaredQrCount: request.body.declaredQrCount,
           notes: request.body.notes,
         })
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // POST /shifts/current/movements — registra movimiento de caja en el turno abierto
+  fastify.post<{ Body: CreateCashMovementBody }>(
+    '/current/movements',
+    {
+      schema: {
+        tags: ['shifts'],
+        summary: 'Registrar movimiento de caja (INGRESO / RETIRO) en el turno abierto',
+        body: {
+          type: 'object',
+          required: ['type', 'amount', 'reason'],
+          properties: {
+            type:     { type: 'string', enum: ['INGRESO', 'RETIRO'] },
+            amount:   { type: 'number', exclusiveMinimum: 0 },
+            reason:   { type: 'string', minLength: 1, maxLength: 200 },
+            branchId: { type: 'string', minLength: 1 },
+          },
+        },
+        response: { 201: cashMovementResponseSchema },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request, reply) => {
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.body.branchId ?? null) : branch_id
+      if (!effectiveBranchId) throw Errors.badRequest('Debe seleccionar una sucursal')
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const shiftRepo    = new PrismaShiftRepository(db, schema)
+        const movementRepo = new PrismaCashMovementRepository(db, schema)
+        const useCase = createCreateCashMovementUseCase({
+          shiftRepository: shiftRepo,
+          cashMovementRepository: movementRepo,
+        })
+        const movement = await useCase({
+          userId:   user_id,
+          branchId: effectiveBranchId,
+          type:     request.body.type,
+          amount:   request.body.amount,
+          reason:   request.body.reason,
+        })
+        return reply.code(201).send(movement)
+      } finally {
+        await db.$disconnect()
+      }
+    },
+  )
+
+  // GET /shifts/current/movements — lista movimientos del turno abierto
+  fastify.get<{ Querystring: { branchId?: string } }>(
+    '/current/movements',
+    {
+      schema: {
+        tags: ['shifts'],
+        summary: 'Listar movimientos de caja del turno abierto',
+        querystring: {
+          type: 'object',
+          properties: { branchId: { type: 'string' } },
+        },
+        response: {
+          200: { type: 'array', items: cashMovementResponseSchema },
+        },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [authenticate],
+    },
+    async (request) => {
+      const { user_id, tenant_id, branch_id, role } = request.user
+      const effectiveBranchId =
+        role === UserRole.ADMIN ? (branch_id ?? request.query.branchId ?? null) : branch_id
+      if (!effectiveBranchId) return []
+
+      const schema = await resolveTenantSchema(tenant_id)
+      const db = createTenantClient(schema)
+      try {
+        const shiftRepo    = new PrismaShiftRepository(db, schema)
+        const movementRepo = new PrismaCashMovementRepository(db, schema)
+        const useCase = createListCashMovementsForCurrentShiftUseCase({
+          shiftRepository:    shiftRepo,
+          cashMovementRepository: movementRepo,
+        })
+        try {
+          return await useCase(user_id, effectiveBranchId)
+        } catch {
+          // No open shift → empty list (UI renders nothing, no 409)
+          return []
+        }
       } finally {
         await db.$disconnect()
       }

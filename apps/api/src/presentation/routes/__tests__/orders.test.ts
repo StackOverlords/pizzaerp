@@ -872,6 +872,331 @@ describe('GET /api/v1/orders', () => {
 })
 
 
+// ─── POST /orders — extras y exclusiones ─────────────────────────────────────
+
+describe('POST /api/v1/orders — extras y exclusiones', () => {
+  let dishWithIngsId: string
+  let includedDishIngId: string
+  let optionalDishIngId: string
+  let extraDishIngId: string
+  let otherDishId: string
+  let otherDishIngId: string
+
+  beforeAll(async () => {
+    // Crear ingredientes base
+    const ing1 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".ingredients
+         (name, purchase_unit, consumption_unit, conversion_factor)
+       VALUES ('Cebolla', 'kg', 'g', 1000)
+       RETURNING id`,
+    )
+    const ing2 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".ingredients
+         (name, purchase_unit, consumption_unit, conversion_factor)
+       VALUES ('Aguacate', 'kg', 'g', 1000)
+       RETURNING id`,
+    )
+    const ing3 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".ingredients
+         (name, purchase_unit, consumption_unit, conversion_factor)
+       VALUES ('Queso doble', 'kg', 'g', 1000)
+       RETURNING id`,
+    )
+    const ing4 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".ingredients
+         (name, purchase_unit, consumption_unit, conversion_factor)
+       VALUES ('Tocino', 'kg', 'g', 1000)
+       RETURNING id`,
+    )
+
+    // Crear platillo con ingredientes
+    const dish = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dishes (name, sale_price, active)
+       VALUES ('Pizza Especial', 100.00, true)
+       RETURNING id`,
+    )
+    dishWithIngsId = dish[0].id
+
+    // Ingrediente INCLUDED (Cebolla)
+    const diIncluded = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dish_ingredients
+         (dish_id, ingredient_id, base_quantity, behavior)
+       VALUES ($1, $2, 10, 'INCLUDED')
+       RETURNING id`,
+      dishWithIngsId,
+      ing1[0].id,
+    )
+    includedDishIngId = diIncluded[0].id
+
+    // Ingrediente OPTIONAL (Aguacate, sin costo extra)
+    const diOptional = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dish_ingredients
+         (dish_id, ingredient_id, base_quantity, behavior, extra_cost)
+       VALUES ($1, $2, 5, 'OPTIONAL', null)
+       RETURNING id`,
+      dishWithIngsId,
+      ing2[0].id,
+    )
+    optionalDishIngId = diOptional[0].id
+
+    // Ingrediente EXTRA (Queso doble, cost=10)
+    const diExtra = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dish_ingredients
+         (dish_id, ingredient_id, base_quantity, behavior, extra_cost)
+       VALUES ($1, $2, 1, 'EXTRA', 10)
+       RETURNING id`,
+      dishWithIngsId,
+      ing3[0].id,
+    )
+    extraDishIngId = diExtra[0].id
+
+    // Otro platillo con su propio ingrediente (para test OE-06)
+    const otherDish = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dishes (name, sale_price, active)
+       VALUES ('Otro Plato', 50.00, true)
+       RETURNING id`,
+    )
+    otherDishId = otherDish[0].id
+
+    const diOther = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".dish_ingredients
+         (dish_id, ingredient_id, base_quantity, behavior, extra_cost)
+       VALUES ($1, $2, 1, 'EXTRA', 5)
+       RETURNING id`,
+      otherDishId,
+      ing4[0].id,
+    )
+    otherDishIngId = diOther[0].id
+  })
+
+  it('OE-01 — exclusión de INCLUDED → 201, row en order_item_exclusions con ingredient_name snapshot', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          exclusions: [{ dishIngredientId: includedDishIngId }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.id).toBeDefined()
+    // price unchanged by exclusions
+    expect(body.total).toBe(100)
+
+    // Verify row in order_item_exclusions
+    const rows = await prisma.$queryRawUnsafe<{ ingredient_name: string; dish_ingredient_id: string }[]>(
+      `SELECT ingredient_name, dish_ingredient_id
+       FROM "${TEST.tenantSchema}".order_item_exclusions
+       WHERE order_item_id = (
+         SELECT id FROM "${TEST.tenantSchema}".order_items WHERE order_id = $1 LIMIT 1
+       )`,
+      body.id,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].ingredient_name).toBe('Cebolla')
+    expect(rows[0].dish_ingredient_id).toBe(includedDishIngId)
+  })
+
+  it('OE-02 — extra de EXTRA (cost=10, qty=2) → 201, unitPrice = salePrice+20, row en order_item_extras', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          extras: [{ dishIngredientId: extraDishIngId, quantity: 2 }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    // unitPrice = 100 + (10 * 2) = 120
+    expect(body.items[0].unitPrice).toBe(120)
+    expect(body.total).toBe(120)
+
+    const rows = await prisma.$queryRawUnsafe<{ ingredient_name: string; unit_cost: unknown; subtotal: unknown; quantity: unknown }[]>(
+      `SELECT ingredient_name, unit_cost, subtotal, quantity
+       FROM "${TEST.tenantSchema}".order_item_extras
+       WHERE order_item_id = (
+         SELECT id FROM "${TEST.tenantSchema}".order_items WHERE order_id = $1 LIMIT 1
+       )`,
+      body.id,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].ingredient_name).toBe('Queso doble')
+    expect(Number(rows[0].unit_cost)).toBe(10)
+    expect(Number(rows[0].subtotal)).toBe(20)
+    expect(Number(rows[0].quantity)).toBe(2)
+  })
+
+  it('OE-03 — combinado extra+exclusión → 201, ambas tablas pobladas', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          extras: [{ dishIngredientId: extraDishIngId, quantity: 1 }],
+          exclusions: [{ dishIngredientId: includedDishIngId }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    // unitPrice = 100 + 10 = 110
+    expect(body.items[0].unitPrice).toBe(110)
+    expect(body.total).toBe(110)
+
+    const orderItemId = (await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_items WHERE order_id = $1 LIMIT 1`,
+      body.id,
+    ))[0].id
+
+    const extrasRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_item_extras WHERE order_item_id = $1`,
+      orderItemId,
+    )
+    expect(extrasRows).toHaveLength(1)
+
+    const exclusionsRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_item_exclusions WHERE order_item_id = $1`,
+      orderItemId,
+    )
+    expect(exclusionsRows).toHaveLength(1)
+  })
+
+  it('OE-04 — exclusión de ingrediente con behavior=EXTRA → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          exclusions: [{ dishIngredientId: extraDishIngId }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/no está en el platillo|no puede excluirse/i)
+  })
+
+  it('OE-05 — extra de ingrediente con behavior=INCLUDED → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          extras: [{ dishIngredientId: includedDishIngId, quantity: 1 }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/incluido|included/i)
+  })
+
+  it('OE-06 — dishIngredientId de otro plato → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          extras: [{ dishIngredientId: otherDishIngId, quantity: 1 }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/no pertenece al platillo/i)
+  })
+
+  it('OE-07 — extra de OPTIONAL con extra_cost=null → 201, unit_cost=0, subtotal=0', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          dishId: dishWithIngsId,
+          quantity: 1,
+          extras: [{ dishIngredientId: optionalDishIngId, quantity: 1 }],
+        }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    // unitPrice unchanged (cost=0)
+    expect(body.items[0].unitPrice).toBe(100)
+    expect(body.total).toBe(100)
+
+    const rows = await prisma.$queryRawUnsafe<{ unit_cost: unknown; subtotal: unknown }[]>(
+      `SELECT unit_cost, subtotal
+       FROM "${TEST.tenantSchema}".order_item_extras
+       WHERE order_item_id = (
+         SELECT id FROM "${TEST.tenantSchema}".order_items WHERE order_id = $1 LIMIT 1
+       )`,
+      body.id,
+    )
+    expect(rows).toHaveLength(1)
+    expect(Number(rows[0].unit_cost)).toBe(0)
+    expect(Number(rows[0].subtotal)).toBe(0)
+  })
+
+  it('OE-08 — payload sin extras ni exclusiones → 201, cero rows en tablas auxiliares (regresión)', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{ dishId: dishWithIngsId, quantity: 1 }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.items[0].unitPrice).toBe(100)
+
+    const orderItemId = (await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_items WHERE order_id = $1 LIMIT 1`,
+      body.id,
+    ))[0].id
+
+    const extrasRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_item_extras WHERE order_item_id = $1`,
+      orderItemId,
+    )
+    expect(extrasRows).toHaveLength(0)
+
+    const exclusionsRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM "${TEST.tenantSchema}".order_item_exclusions WHERE order_item_id = $1`,
+      orderItemId,
+    )
+    expect(exclusionsRows).toHaveLength(0)
+  })
+})
+
 // ─── POST /orders — ADMIN branch override ────────────────────────────────────
 
 describe('POST /api/v1/orders — ADMIN branch override', () => {

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 import { api } from '@/core/http/client'
 import { queryKeys } from '@/core/http/query-keys'
 import { useAuthStore } from '@/core/auth/store'
@@ -8,12 +9,15 @@ import {
   shiftSchema,
   closeShiftResponseSchema,
   shiftHistoryPageSchema,
+  cashMovementSchema,
   type Shift,
   type OpenShiftInput,
   type CloseShiftInput,
   type CloseShiftResponse,
   type ShiftHistoryFilters,
   type ShiftHistoryPage,
+  type CashMovement,
+  type CreateCashMovementInput,
 } from './schemas'
 
 export function useCurrentShift() {
@@ -98,5 +102,40 @@ export function useShiftHistory(filters: ShiftHistoryFilters) {
     },
     enabled: isAdmin,
     staleTime: 30_000,
+  })
+}
+
+export function useCashMovements(shiftId: string | undefined) {
+  return useQuery<CashMovement[]>({
+    queryKey: shiftId ? queryKeys.shifts.movements(shiftId) : queryKeys.shifts.movements('none'),
+    queryFn: async () => {
+      const user = useAuthStore.getState().user
+      const params =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { branchId: getEffectiveBranchId() ?? undefined }
+          : undefined
+      const { data } = await api.get<unknown>('/api/v1/shifts/current/movements', { params })
+      return z.array(cashMovementSchema).parse(data)
+    },
+    enabled: Boolean(shiftId),
+    staleTime: 30_000,
+  })
+}
+
+export function useCreateCashMovement() {
+  const queryClient = useQueryClient()
+  return useMutation<CashMovement, unknown, CreateCashMovementInput>({
+    mutationFn: async (input) => {
+      const user = useAuthStore.getState().user
+      const payload =
+        user?.role === 'ADMIN' && user.branchId === null
+          ? { ...input, branchId: getEffectiveBranchId() ?? undefined }
+          : input
+      const { data } = await api.post<unknown>('/api/v1/shifts/current/movements', payload)
+      return cashMovementSchema.parse(data)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.shifts.all() })
+    },
   })
 }

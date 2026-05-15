@@ -45,8 +45,8 @@ export async function setupRoutes(fastify: FastifyInstance) {
           type: 'object',
           required: ['tenantName', 'slug', 'username', 'password'],
           properties: {
-            tenantName: { type: 'string', minLength: 1, example: 'MaxPizza Central' },
-            slug: { type: 'string', minLength: 2, maxLength: 60, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', example: 'maxpizza' },
+            tenantName: { type: 'string', minLength: 1, example: 'FoodERP Demo' },
+            slug: { type: 'string', minLength: 2, maxLength: 60, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', example: 'fooderp' },
             username: { type: 'string', minLength: 3, example: 'admin' },
             password: { type: 'string', minLength: 6, example: 'secreto123' },
           },

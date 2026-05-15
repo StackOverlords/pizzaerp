@@ -1,5 +1,6 @@
 import type { IShiftRepository } from '../../domain/repositories/i-shift-repository'
 import type { IShiftClosureRepository } from '../../domain/repositories/i-shift-closure-repository'
+import type { ICashMovementRepository } from '../../domain/repositories/i-cash-movement-repository'
 import type { Shift } from '../../domain/entities/shift'
 import type { ShiftClosure } from '../../domain/entities/shift-closure'
 import { ShiftStatus } from '../../domain/entities/shift'
@@ -8,6 +9,7 @@ import { Errors } from '../../shared/errors/app-error'
 interface Dependencies {
   shiftRepository: IShiftRepository
   shiftClosureRepository: IShiftClosureRepository
+  cashMovementRepository: ICashMovementRepository
 }
 
 export interface CloseShiftInput {
@@ -23,7 +25,7 @@ export interface CloseShiftResult {
   closure: ShiftClosure
 }
 
-export function createCloseShiftUseCase({ shiftRepository, shiftClosureRepository }: Dependencies) {
+export function createCloseShiftUseCase({ shiftRepository, shiftClosureRepository, cashMovementRepository }: Dependencies) {
   return async function closeShift(input: CloseShiftInput): Promise<CloseShiftResult> {
     if (input.declaredCash < 0) throw Errors.badRequest('declaredCash must be >= 0')
     if (input.declaredQrCount < 0) throw Errors.badRequest('declaredQrCount must be >= 0')
@@ -35,9 +37,12 @@ export function createCloseShiftUseCase({ shiftRepository, shiftClosureRepositor
     }
 
     // Calculate expected totals from DB — happens AFTER receiving declared values (cierre ciego)
-    const summary = await shiftRepository.getSalesSummary(openShift.id)
+    const summary   = await shiftRepository.getSalesSummary(openShift.id)
+    const movements = await cashMovementRepository.getSummaryForShift(openShift.id)
 
-    const expectedCash = parseFloat((openShift.initialCash + summary.cashFromSales).toFixed(2))
+    const expectedCash = parseFloat(
+      (openShift.initialCash + summary.cashFromSales + movements.ingresoTotal - movements.retiroTotal).toFixed(2),
+    )
     const expectedQrTotal = parseFloat(summary.qrTotal.toFixed(2))
     const expectedQrCount = summary.qrCount
     const cashDifference = parseFloat((input.declaredCash - expectedCash).toFixed(2))
