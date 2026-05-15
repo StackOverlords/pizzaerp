@@ -38,4 +38,36 @@ export function registerMenuCommands() {
       eventBus.emit('menu.categoryDialog.requested', { mode: 'create' })
     },
   )
+
+  commandRegistry.register(
+    'menu.action.viewCombos',
+    () => i18next.t('commands.menu.viewCombos', 'Combos'),
+    () => { openRoute('menu.combos') },
+  )
+
+  commandRegistry.register(
+    'menu.action.createCombo',
+    () => i18next.t('commands.menu.createCombo', 'Nuevo combo'),
+    () => {
+      if (!useAuthStore.getState().hasRole('ADMIN')) return
+      eventBus.emit('menu.comboDialog.requested', { mode: 'create' })
+    },
+  )
+
+  commandRegistry.register(
+    'menu.action.viewIngredients',
+    () => i18next.t('commands.menu.viewIngredients', 'Ingredientes'),
+    () => {
+      openRoute('menu.ingredients')
+    },
+  )
+
+  commandRegistry.register(
+    'menu.action.createIngredient',
+    () => i18next.t('commands.menu.createIngredient', 'Nuevo ingrediente'),
+    () => {
+      if (!useAuthStore.getState().hasRole('ADMIN')) return
+      eventBus.emit('menu.ingredientDialog.requested', { mode: 'create' })
+    },
+  )
 }

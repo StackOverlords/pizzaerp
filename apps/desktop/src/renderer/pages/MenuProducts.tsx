@@ -8,6 +8,7 @@ import { extractApiMessage } from '@/core/http/error'
 import { DishTable } from '@/features/menu/components/DishTable'
 import { DishFormDialog } from '@/features/menu/components/DishFormDialog'
 import { CloneDishDialog } from '@/features/menu/components/CloneDishDialog'
+import { DishIngredientsSheet } from '@/features/menu/components/DishIngredientsSheet'
 import { useDeactivateDish } from '@/features/menu/api'
 import type { Dish } from '@/features/menu/schemas'
 
@@ -21,6 +22,9 @@ export default function MenuProductsPage() {
 
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false)
   const [cloneTargetDish, setCloneTargetDish] = useState<Dish | null>(null)
+
+  const [ingredientsSheetOpen, setIngredientsSheetOpen] = useState(false)
+  const [ingredientsDish, setIngredientsDish]           = useState<Dish | null>(null)
 
   useEffect(() => {
     const unsub = eventBus.on('menu.dishDialog.requested', ({ mode }) => {
@@ -58,6 +62,11 @@ export default function MenuProductsPage() {
     }
   }
 
+  function handleManageIngredients(dish: Dish) {
+    setIngredientsDish(dish)
+    setIngredientsSheetOpen(true)
+  }
+
   function handleNewDish() {
     setSelectedDish(null)
     setDishFormMode('create')
@@ -75,7 +84,12 @@ export default function MenuProductsPage() {
         )}
       </div>
 
-      <DishTable onEdit={handleEdit} onClone={handleClone} onDeactivate={handleDeactivate} />
+      <DishTable
+        onEdit={handleEdit}
+        onClone={handleClone}
+        onDeactivate={handleDeactivate}
+        onManageIngredients={handleManageIngredients}
+      />
 
       <DishFormDialog
         open={dishFormOpen}
@@ -88,6 +102,13 @@ export default function MenuProductsPage() {
         open={cloneDialogOpen}
         onOpenChange={setCloneDialogOpen}
         dish={cloneTargetDish}
+      />
+
+      <DishIngredientsSheet
+        open={ingredientsSheetOpen}
+        onOpenChange={setIngredientsSheetOpen}
+        dishId={ingredientsDish?.id ?? null}
+        dishName={ingredientsDish?.name ?? ''}
       />
     </div>
   )

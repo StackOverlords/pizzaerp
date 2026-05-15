@@ -8,9 +8,10 @@ import { timeForInput } from '../schemas'
 import type { Dish, DishFilters, Category } from '../schemas'
 
 interface DishTableProps {
-  onEdit: (dish: Dish) => void
-  onClone: (dish: Dish) => void
-  onDeactivate: (dish: Dish) => void
+  onEdit:             (dish: Dish) => void
+  onClone:            (dish: Dish) => void
+  onDeactivate:       (dish: Dish) => void
+  onManageIngredients:(dish: Dish) => void
 }
 
 function resolveCategoryName(categoryId: string | null, map: Map<string, string>): string {
@@ -25,7 +26,7 @@ function formatAvailability(from: string | null, to: string | null): string {
   return `${f} — ${t}`
 }
 
-export function DishTable({ onEdit, onClone, onDeactivate }: DishTableProps) {
+export function DishTable({ onEdit, onClone, onDeactivate, onManageIngredients }: DishTableProps) {
   const [filters, setFilters] = useState<DishFilters>({})
   const isAdmin = useAuthStore((s) => s.hasRole('ADMIN'))
   const { data: dishes = [], isLoading, isError } = useMenuDishes(filters)
@@ -101,6 +102,10 @@ export function DishTable({ onEdit, onClone, onDeactivate }: DishTableProps) {
         {
           label: 'Editar',
           onClick: () => onEdit(dish),
+        },
+        {
+          label: 'Ingredientes',
+          onClick: () => onManageIngredients(dish),
         },
         {
           label: 'Clonar',
