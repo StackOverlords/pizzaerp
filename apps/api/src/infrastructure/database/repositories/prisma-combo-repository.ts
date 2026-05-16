@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { IComboRepository, CreateComboData, UpdateComboData, CreateComboSlotData, UpdateComboSlotData } from '../../../domain/repositories/i-combo-repository'
-import type { Combo, ComboSlot, ComboSlotOption } from '../../../domain/entities/combo'
+import type { Combo, ComboSlot, ComboSlotOption, ComboWithDetails } from '../../../domain/entities/combo'
 
 type RawCombo = {
   id: string
@@ -43,6 +43,19 @@ export class PrismaComboRepository implements IComboRepository {
       id,
     )
     return rows[0] ? this.toCombo(rows[0]) : null
+  }
+
+  async findByIdWithDetails(id: string): Promise<ComboWithDetails | null> {
+    const combo = await this.findById(id)
+    if (!combo) return null
+    const slots = await this.listSlotsByCombo(id)
+    const slotsWithOptions = await Promise.all(
+      slots.map(async slot => ({
+        ...slot,
+        options: await this.listOptionsBySlot(slot.id),
+      })),
+    )
+    return { ...combo, slots: slotsWithOptions }
   }
 
   async list({ activeOnly }: { activeOnly?: boolean }): Promise<Combo[]> {

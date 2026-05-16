@@ -6,6 +6,7 @@ import { PrismaOrderRepository } from '../../infrastructure/database/repositorie
 import { PrismaShiftRepository } from '../../infrastructure/database/repositories/prisma-shift-repository'
 import { PrismaDishRepository } from '../../infrastructure/database/repositories/prisma-dish-repository'
 import { PrismaDishIngredientRepository } from '../../infrastructure/database/repositories/prisma-dish-ingredient-repository'
+import { PrismaComboRepository } from '../../infrastructure/database/repositories/prisma-combo-repository'
 import { PrismaPaymentRepository } from '../../infrastructure/database/repositories/prisma-payment-repository'
 import { createCreateOrderUseCase } from '../../application/orders/create-order.use-case'
 import { createGetOrderUseCase } from '../../application/orders/get-order.use-case'
@@ -34,14 +35,15 @@ interface ListOrdersQuery {
   sortOrder?: 'asc' | 'desc'
 }
 
+type CreateOrderBodyItem =
+  | { kind: 'DISH';  dishId: string; quantity: number; notes?: string;
+      extras?: Array<{ dishIngredientId: string; quantity: number }>;
+      exclusions?: Array<{ dishIngredientId: string }> }
+  | { kind: 'COMBO'; comboId: string; quantity: number; notes?: string;
+      selections: Array<{ comboSlotId: string; dishId: string }> }
+
 interface CreateOrderBody {
-  items: Array<{
-    dishId: string
-    quantity: number
-    notes?: string
-    extras?: Array<{ dishIngredientId: string; quantity: number }>
-    exclusions?: Array<{ dishIngredientId: string }>
-  }>
+  items: CreateOrderBodyItem[]
   notes?: string
   branchId?: string
 }
@@ -64,18 +66,60 @@ interface ApplyDiscountBody {
   reason?: string
 }
 
-const orderItemSchema = {
+const orderItemExtraSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
-    orderId: { type: 'string' },
-    dishId: { type: ['string', 'null'] },
-    dishName: { type: 'string' },
-    unitPrice: { type: 'number' },
+    orderItemId: { type: 'string' },
+    dishIngredientId: { type: ['string', 'null'] },
+    ingredientName: { type: 'string' },
     quantity: { type: 'number' },
+    unitCost: { type: 'number' },
     subtotal: { type: 'number' },
-    notes: { type: ['string', 'null'] },
+  },
+}
+
+const orderItemExclusionSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    orderItemId: { type: 'string' },
+    dishIngredientId: { type: ['string', 'null'] },
+    ingredientName: { type: 'string' },
+  },
+}
+
+const orderItemComboSelectionSchema = {
+  type: 'object',
+  properties: {
+    id:          { type: 'string' },
+    orderItemId: { type: 'string' },
+    comboSlotId: { type: ['string', 'null'] },
+    slotName:    { type: 'string' },
+    dishId:      { type: ['string', 'null'] },
+    dishName:    { type: 'string' },
+    orderIndex:  { type: 'number' },
+  },
+}
+
+const orderItemSchema = {
+  type: 'object',
+  properties: {
+    id:        { type: 'string' },
+    orderId:   { type: 'string' },
+    kind:      { type: 'string', enum: ['DISH', 'COMBO'] },
+    dishId:    { type: ['string', 'null'] },
+    dishName:  { type: 'string' },
+    comboId:   { type: ['string', 'null'] },
+    comboName: { type: ['string', 'null'] },
+    unitPrice: { type: 'number' },
+    quantity:  { type: 'number' },
+    subtotal:  { type: 'number' },
+    notes:     { type: ['string', 'null'] },
     createdAt: { type: 'string', format: 'date-time' },
+    extras:     { type: 'array', items: orderItemExtraSchema },
+    exclusions: { type: 'array', items: orderItemExclusionSchema },
+    selections: { type: 'array', items: orderItemComboSelectionSchema },
   },
 }
 
@@ -163,37 +207,63 @@ export async function orderRoutes(fastify: FastifyInstance) {
               type: 'array',
               minItems: 1,
               items: {
-                type: 'object',
-                required: ['dishId', 'quantity'],
-                properties: {
-                  dishId: { type: 'string' },
-                  quantity: { type: 'integer', minimum: 1 },
-                  notes: { type: 'string' },
-                  extras: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      required: ['dishIngredientId', 'quantity'],
-                      properties: {
-                        dishIngredientId: { type: 'string' },
-                        quantity: { type: 'number', exclusiveMinimum: 0 },
+                oneOf: [
+                  {
+                    type: 'object',
+                    required: ['kind', 'dishId', 'quantity'],
+                    properties: {
+                      kind:     { type: 'string', enum: ['DISH'] },
+                      dishId:   { type: 'string' },
+                      quantity: { type: 'integer', minimum: 1 },
+                      notes:    { type: 'string' },
+                      extras: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          required: ['dishIngredientId', 'quantity'],
+                          properties: {
+                            dishIngredientId: { type: 'string' },
+                            quantity:         { type: 'number', exclusiveMinimum: 0 },
+                          },
+                        },
+                      },
+                      exclusions: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          required: ['dishIngredientId'],
+                          properties: {
+                            dishIngredientId: { type: 'string' },
+                          },
+                        },
                       },
                     },
                   },
-                  exclusions: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      required: ['dishIngredientId'],
-                      properties: {
-                        dishIngredientId: { type: 'string' },
+                  {
+                    type: 'object',
+                    required: ['kind', 'comboId', 'quantity', 'selections'],
+                    properties: {
+                      kind:     { type: 'string', enum: ['COMBO'] },
+                      comboId:  { type: 'string' },
+                      quantity: { type: 'integer', minimum: 1 },
+                      notes:    { type: 'string' },
+                      selections: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          required: ['comboSlotId', 'dishId'],
+                          properties: {
+                            comboSlotId: { type: 'string' },
+                            dishId:      { type: 'string' },
+                          },
+                        },
                       },
                     },
                   },
-                },
+                ],
               },
             },
-            notes: { type: 'string' },
+            notes:    { type: 'string' },
             branchId: { type: 'string', minLength: 1 },
           },
         },
@@ -215,11 +285,13 @@ export async function orderRoutes(fastify: FastifyInstance) {
         const shiftRepo = new PrismaShiftRepository(db, schema)
         const dishRepo = new PrismaDishRepository(db, schema)
         const dishIngredientRepo = new PrismaDishIngredientRepository(db, schema)
+        const comboRepo = new PrismaComboRepository(db, schema)
         const createOrder = createCreateOrderUseCase({
           orderRepository: orderRepo,
           shiftRepository: shiftRepo,
           dishRepository: dishRepo,
           dishIngredientRepository: dishIngredientRepo,
+          comboRepository: comboRepo,
         })
         const order = await createOrder({
           userId: user_id,

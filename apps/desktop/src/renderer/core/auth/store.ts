@@ -34,7 +34,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   },
 
   logout: async () => {
-    await authSDK.logout()
+    try {
+      await api.post('/api/v1/auth/logout')
+    } catch {
+      // Server invalidation failed — proceed with local cleanup anyway
+    }
+    await authSDK.clearLocalSession()
   },
 
   hasPermission: (permission) => {

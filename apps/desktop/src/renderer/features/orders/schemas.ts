@@ -11,18 +11,57 @@ export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD]
 export const DISCOUNT_TYPE = { AMOUNT: 'AMOUNT', PERCENTAGE: 'PERCENTAGE' } as const
 export type DiscountType = (typeof DISCOUNT_TYPE)[keyof typeof DISCOUNT_TYPE]
 
+export const ORDER_ITEM_KIND = { DISH: 'DISH', COMBO: 'COMBO' } as const
+export type OrderItemKind = (typeof ORDER_ITEM_KIND)[keyof typeof ORDER_ITEM_KIND]
+
 // ── Entities ───────────────────────────────────────────────────────────────────
 
+export const orderItemComboSelectionSchema = z.object({
+  id:          z.string(),
+  orderItemId: z.string(),
+  comboSlotId: z.string().nullable(),
+  slotName:    z.string(),
+  dishId:      z.string().nullable(),
+  dishName:    z.string(),
+  orderIndex:  z.number(),
+})
+export type OrderItemComboSelection = z.infer<typeof orderItemComboSelectionSchema>
+
+export const orderItemExtraSchema = z.object({
+  id:               z.string(),
+  orderItemId:      z.string(),
+  dishIngredientId: z.string().nullable(),
+  ingredientName:   z.string(),
+  quantity:         z.number(),
+  unitCost:         z.number(),
+  subtotal:         z.number(),
+})
+export type OrderItemExtra = z.infer<typeof orderItemExtraSchema>
+
+export const orderItemExclusionSchema = z.object({
+  id:               z.string(),
+  orderItemId:      z.string(),
+  dishIngredientId: z.string().nullable(),
+  ingredientName:   z.string(),
+})
+export type OrderItemExclusion = z.infer<typeof orderItemExclusionSchema>
+
 export const orderItemSchema = z.object({
-  id:        z.string(),
-  orderId:   z.string(),
-  dishId:    z.string().nullable(),
-  dishName:  z.string(),
-  unitPrice: z.number(),
-  quantity:  z.number().int(),
-  subtotal:  z.number(),
-  notes:     z.string().nullable(),
-  createdAt: z.coerce.date(),
+  id:         z.string(),
+  orderId:    z.string(),
+  kind:       z.enum([ORDER_ITEM_KIND.DISH, ORDER_ITEM_KIND.COMBO]).default(ORDER_ITEM_KIND.DISH),
+  dishId:     z.string().nullable(),
+  dishName:   z.string(),
+  comboId:    z.string().nullable().default(null),
+  comboName:  z.string().nullable().default(null),
+  unitPrice:  z.number(),
+  quantity:   z.number().int(),
+  subtotal:   z.number(),
+  notes:      z.string().nullable(),
+  createdAt:  z.coerce.date(),
+  extras:     z.array(orderItemExtraSchema).default([]),
+  exclusions: z.array(orderItemExclusionSchema).default([]),
+  selections: z.array(orderItemComboSelectionSchema).default([]),
 })
 export type OrderItem = z.infer<typeof orderItemSchema>
 
@@ -86,7 +125,8 @@ export type OrderListPage = z.infer<typeof orderListPageSchema>
 
 // ── Form input schemas ─────────────────────────────────────────────────────────
 
-export const orderItemInputSchema = z.object({
+export const orderItemDishInputSchema = z.object({
+  kind:     z.literal(ORDER_ITEM_KIND.DISH),
   dishId:   z.string({ message: 'Requerido' }),
   quantity: z.number().int().positive('Cantidad debe ser positiva'),
   notes:    z.string().max(500).optional(),
@@ -98,10 +138,28 @@ export const orderItemInputSchema = z.object({
     dishIngredientId: z.string(),
   })).optional(),
 })
+export type OrderItemDishInput = z.infer<typeof orderItemDishInputSchema>
+
+export const orderItemComboInputSchema = z.object({
+  kind:     z.literal(ORDER_ITEM_KIND.COMBO),
+  comboId:  z.string({ message: 'Requerido' }),
+  quantity: z.number().int().positive('Cantidad debe ser positiva'),
+  notes:    z.string().max(500).optional(),
+  selections: z.array(z.object({
+    comboSlotId: z.string(),
+    dishId:      z.string(),
+  })).min(1),
+})
+export type OrderItemComboInput = z.infer<typeof orderItemComboInputSchema>
+
+export const orderItemInputSchema = z.discriminatedUnion('kind', [
+  orderItemDishInputSchema,
+  orderItemComboInputSchema,
+])
 export type OrderItemInput = z.infer<typeof orderItemInputSchema>
 
 export const createOrderInputSchema = z.object({
-  items: z.array(orderItemInputSchema).min(1, 'Agregá al menos un platillo'),
+  items: z.array(orderItemInputSchema).min(1, 'Agregá al menos un platillo o combo'),
   notes: z.string().max(500).optional(),
 })
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>

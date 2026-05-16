@@ -1,4 +1,4 @@
-import type { Combo, ComboSlot, ComboSlotOption } from '../entities/combo'
+import type { Combo, ComboSlot, ComboSlotOption, ComboWithDetails } from '../entities/combo'
 
 export interface CreateComboData {
   name: string
@@ -33,6 +33,7 @@ export interface UpdateComboSlotData {
 
 export interface IComboRepository {
   findById(id: string): Promise<Combo | null>
+  findByIdWithDetails(id: string): Promise<ComboWithDetails | null>
   list(filters: { activeOnly?: boolean }): Promise<Combo[]>
   create(data: CreateComboData): Promise<Combo>
   update(id: string, data: UpdateComboData): Promise<Combo>

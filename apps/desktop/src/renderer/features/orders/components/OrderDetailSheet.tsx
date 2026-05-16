@@ -126,8 +126,22 @@ export function OrderDetailSheet({ orderId, onOpenChange }: OrderDetailSheetProp
                       <TableCell>
                         <div>
                           <p>{item.dishName}</p>
+                          {item.extras.length > 0 && (
+                            <ul className="text-xs text-muted-foreground mt-0.5 space-y-0">
+                              {item.extras.map((e) => (
+                                <li key={e.id}>+ {e.ingredientName} ×{e.quantity}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {item.exclusions.length > 0 && (
+                            <ul className="text-xs text-muted-foreground mt-0.5 space-y-0">
+                              {item.exclusions.map((x) => (
+                                <li key={x.id}>− {x.ingredientName}</li>
+                              ))}
+                            </ul>
+                          )}
                           {item.notes && (
-                            <p className="text-xs text-muted-foreground">{item.notes}</p>
+                            <p className="text-xs text-muted-foreground italic">{item.notes}</p>
                           )}
                         </div>
                       </TableCell>
