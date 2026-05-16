@@ -25,6 +25,42 @@ import {
 } from './schemas'
 import { z } from 'zod'
 
+// ── Combo schemas (internal to api.ts) ────────────────────────────────────────
+
+const comboSummarySchema = z.object({
+  id:            z.string(),
+  name:          z.string(),
+  description:   z.string().nullable(),
+  salePrice:     z.number(),
+  active:        z.boolean(),
+  availableFrom: z.string().nullable(),
+  availableTo:   z.string().nullable(),
+  createdAt:     z.coerce.date(),
+})
+export type ComboSummary = z.infer<typeof comboSummarySchema>
+
+const comboSlotOptionSchema = z.object({
+  id:     z.string(),
+  slotId: z.string(),
+  dishId: z.string(),
+})
+
+const comboSlotSchema = z.object({
+  id:         z.string(),
+  comboId:    z.string(),
+  name:       z.string(),
+  categoryId: z.string().nullable(),
+  required:   z.boolean(),
+  orderIndex: z.number(),
+  options:    z.array(comboSlotOptionSchema),
+})
+export type ComboSlot = z.infer<typeof comboSlotSchema>
+
+const comboDetailSchema = comboSummarySchema.extend({
+  slots: z.array(comboSlotSchema),
+})
+export type ComboDetail = z.infer<typeof comboDetailSchema>
+
 export { useStaffOptions } from '@/features/shifts/api'
 export { useDishIngredients } from '@/features/menu/api'
 
@@ -128,6 +164,32 @@ export function useApplyDiscount() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.orders.all() })
       eventBus.emit('order.status.changed', { orderId: id, status: 'PENDING' })
     },
+  })
+}
+
+export function useCombos() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  return useQuery<ComboSummary[]>({
+    queryKey: queryKeys.menu.combos({ activeOnly: true }),
+    queryFn: async () => {
+      const { data } = await api.get<unknown>('/api/v1/combos', { params: { activeOnly: 'true' } })
+      return z.array(comboSummarySchema).parse(data)
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useCombo(id: string | null | undefined) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  return useQuery<ComboDetail>({
+    queryKey: queryKeys.menu.combo(id ?? ''),
+    queryFn: async () => {
+      const { data } = await api.get<unknown>(`/api/v1/combos/${id}`)
+      return comboDetailSchema.parse(data)
+    },
+    enabled: !!id && isAuthenticated,
+    staleTime: 5 * 60_000,
   })
 }
 

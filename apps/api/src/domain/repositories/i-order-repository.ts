@@ -1,5 +1,13 @@
 import type { Order, OrderWithItems } from '../entities/order'
-import type { OrderStatus } from '../entities/order'
+import type { OrderStatus, OrderItemKind } from '../entities/order'
+
+export interface CreateOrderItemComboSelectionData {
+  comboSlotId: string
+  slotName: string
+  dishId: string
+  dishName: string
+  orderIndex: number
+}
 
 export interface CreateOrderItemExtraData {
   dishIngredientId: string
@@ -15,14 +23,18 @@ export interface CreateOrderItemExclusionData {
 }
 
 export interface CreateOrderItemData {
+  kind: OrderItemKind
   dishId: string | null
   dishName: string
+  comboId: string | null
+  comboName: string | null
   unitPrice: number
   quantity: number
   subtotal: number
   notes?: string
   extras?: CreateOrderItemExtraData[]
   exclusions?: CreateOrderItemExclusionData[]
+  selections?: CreateOrderItemComboSelectionData[]
 }
 
 export interface CreateOrderData {

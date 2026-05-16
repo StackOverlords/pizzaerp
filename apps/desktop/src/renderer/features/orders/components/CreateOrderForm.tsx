@@ -9,15 +9,17 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/format'
 import { extractApiMessage } from '@/core/http/error'
 import { notify } from '@/core/notify'
 import { openRoute } from '@/core/tabs/open-route'
 import { useCreateOrder, useDishIngredients } from '../api'
-import { createOrderInputSchema, type CreateOrderInput, type Dish } from '../schemas'
+import { createOrderInputSchema, ORDER_ITEM_KIND, type CreateOrderInput, type Dish } from '../schemas'
 import type { DishIngredientForOrder } from '@/features/menu/schemas'
 import { DISH_INGREDIENT_BEHAVIOR } from '@/features/menu/schemas'
 import { DishPicker } from './DishPicker'
+import { ComboPicker, type ComboAddPayload } from './ComboPicker'
 
 type BuilderExtra = { dishIngredientId: string; quantity: number }
 type BuilderExclusion = { dishIngredientId: string }
@@ -38,6 +40,10 @@ export function CreateOrderForm() {
   const [builderExclusions, setBuilderExclusions] = useState<BuilderExclusion[]>([])
   const dishCache = useRef<Map<string, Dish>>(new Map())
   const ingredientLabelCache = useRef<Map<string, IngredientCacheMeta>>(new Map())
+  const comboNameCache = useRef<Map<string, string>>(new Map())
+  const comboPriceCache = useRef<Map<string, number>>(new Map())
+  // keyed by `${comboId}:${slotId}:${dishId}`
+  const comboSelectionLabelCache = useRef<Map<string, { slotName: string; dishName: string }>>(new Map())
   const mutation = useCreateOrder()
 
   const { data: dishIngredients = [] } = useDishIngredients(selectedDishId)
@@ -66,23 +72,17 @@ export function CreateOrderForm() {
 
   function toggleIngredient(di: DishIngredientForOrder) {
     if (di.behavior === DISH_INGREDIENT_BEHAVIOR.INCLUDED) {
-      // INCLUDED: default is checked (in dish). Unchecking = add exclusion
       const existing = builderExclusions.find((x) => x.dishIngredientId === di.id)
       if (existing) {
-        // Re-check: remove exclusion
         setBuilderExclusions((prev) => prev.filter((x) => x.dishIngredientId !== di.id))
       } else {
-        // Uncheck: add exclusion
         setBuilderExclusions((prev) => [...prev, { dishIngredientId: di.id }])
       }
     } else {
-      // OPTIONAL or EXTRA: default is unchecked. Checking = add extra
       const existing = builderExtras.find((e) => e.dishIngredientId === di.id)
       if (existing) {
-        // Uncheck: remove extra
         setBuilderExtras((prev) => prev.filter((e) => e.dishIngredientId !== di.id))
       } else {
-        // Check: add extra with quantity=1
         setBuilderExtras((prev) => [...prev, { dishIngredientId: di.id, quantity: 1 }])
       }
     }
@@ -90,17 +90,14 @@ export function CreateOrderForm() {
 
   function isIngredientChecked(di: DishIngredientForOrder): boolean {
     if (di.behavior === DISH_INGREDIENT_BEHAVIOR.INCLUDED) {
-      // Checked unless it's in exclusions
       return !builderExclusions.some((x) => x.dishIngredientId === di.id)
     }
-    // OPTIONAL / EXTRA: checked if in extras
     return builderExtras.some((e) => e.dishIngredientId === di.id)
   }
 
   function handleAddItem() {
     if (!selectedDishId) return
 
-    // Populate the ingredient label cache for display in right panel
     for (const di of dishIngredients) {
       ingredientLabelCache.current.set(di.id, {
         name: di.ingredient.name,
@@ -110,6 +107,7 @@ export function CreateOrderForm() {
     }
 
     append({
+      kind: ORDER_ITEM_KIND.DISH,
       dishId:     selectedDishId,
       quantity:   builderQty,
       notes:      builderNotes || undefined,
@@ -124,10 +122,26 @@ export function CreateOrderForm() {
     setBuilderExclusions([])
   }
 
+  function handleComboAdd(payload: ComboAddPayload) {
+    comboNameCache.current.set(payload.comboId, payload.comboName)
+    comboPriceCache.current.set(payload.comboId, payload.unitPrice)
+    for (const sl of payload.selectionLabels) {
+      comboSelectionLabelCache.current.set(
+        `${payload.comboId}:${sl.slotId}:${sl.dishId}`,
+        { slotName: sl.slotName, dishName: sl.dishName },
+      )
+    }
+    append(payload.input)
+  }
+
   const subtotal = watchedItems.reduce((sum, item) => {
+    if (item.kind === ORDER_ITEM_KIND.COMBO) {
+      const price = comboPriceCache.current.get(item.comboId) ?? 0
+      return sum + price * item.quantity
+    }
     const dish = dishCache.current.get(item.dishId)
     if (!dish) return sum
-    const extrasCost = (item.extras ?? []).reduce((acc, e) => {
+    const extrasCost = (item.extras ?? []).reduce((acc: number, e: { dishIngredientId: string; quantity: number }) => {
       const meta = ingredientLabelCache.current.get(e.dishIngredientId)
       return acc + (meta?.extraCost ?? 0) * e.quantity
     }, 0)
@@ -142,6 +156,9 @@ export function CreateOrderForm() {
       reset()
       dishCache.current.clear()
       ingredientLabelCache.current.clear()
+      comboNameCache.current.clear()
+      comboPriceCache.current.clear()
+      comboSelectionLabelCache.current.clear()
       setSelectedDishId(null)
       setBuilderQtyStr('1')
       setBuilderNotes('')
@@ -153,7 +170,6 @@ export function CreateOrderForm() {
     }
   }
 
-  // Group ingredients by behavior for the personalization panel
   const includedIngredients = dishIngredients.filter(
     (di) => di.behavior === DISH_INGREDIENT_BEHAVIOR.INCLUDED,
   )
@@ -168,127 +184,139 @@ export function CreateOrderForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-      {/* Left column — dish builder */}
+      {/* Left column — item builder */}
       <Card className="flex flex-col">
         <CardHeader className="pb-2">
-          <p className="text-sm font-medium">Agregar platillo</p>
+          <p className="text-sm font-medium">Agregar ítem</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <DishPicker
-            value={selectedDishId}
-            onChange={handleDishPickerChange}
-            disabled={isSubmitting}
-            placeholder="Seleccionar platillo..."
-          />
+          <Tabs defaultValue="dishes">
+            <TabsList className="grid grid-cols-2 w-fit mb-2">
+              <TabsTrigger value="dishes">Platillos</TabsTrigger>
+              <TabsTrigger value="combos">Combos</TabsTrigger>
+            </TabsList>
 
-          {/* Personalization panel — only shown when dish has ingredients */}
-          {hasPersonalization && (
-            <div className="rounded-md border p-3 space-y-2 max-h-64 overflow-y-auto">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Personalización
-              </p>
-
-              {includedIngredients.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground">Quitar</p>
-                  {includedIngredients.map((di) => (
-                    <label
-                      key={di.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={isIngredientChecked(di)}
-                        onCheckedChange={() => toggleIngredient(di)}
-                        disabled={isSubmitting}
-                      />
-                      <span>{di.ingredient.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {optionalIngredients.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground">Opcionales</p>
-                  {optionalIngredients.map((di) => (
-                    <label
-                      key={di.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={isIngredientChecked(di)}
-                        onCheckedChange={() => toggleIngredient(di)}
-                        disabled={isSubmitting}
-                      />
-                      <span>{di.ingredient.name}</span>
-                      <span className="text-muted-foreground text-xs">+$0</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {extraIngredients.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground">Extras</p>
-                  {extraIngredients.map((di) => (
-                    <label
-                      key={di.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={isIngredientChecked(di)}
-                        onCheckedChange={() => toggleIngredient(di)}
-                        disabled={isSubmitting}
-                      />
-                      <span>{di.ingredient.name}</span>
-                      {di.extraCost != null && di.extraCost > 0 && (
-                        <Badge variant="secondary" className="text-xs py-0">
-                          +{formatCurrency(di.extraCost)}
-                        </Badge>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">Cantidad</label>
-              <Input
-                type="number"
-                min={1}
-                value={builderQtyStr}
-                onChange={(e) => setBuilderQtyStr(e.target.value)}
-                onBlur={() => setBuilderQtyStr(String(builderQty))}
+            <TabsContent value="dishes" className="space-y-3">
+              <DishPicker
+                value={selectedDishId}
+                onChange={handleDishPickerChange}
                 disabled={isSubmitting}
-                className="h-8 text-sm"
+                placeholder="Seleccionar platillo..."
               />
-            </div>
-            <div className="flex-[2]">
-              <label className="text-xs text-muted-foreground mb-1 block">Notas (opcional)</label>
-              <Input
-                type="text"
-                value={builderNotes}
-                onChange={(e) => setBuilderNotes(e.target.value)}
-                disabled={isSubmitting}
-                placeholder="Sin cebolla, etc."
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddItem}
-            disabled={!selectedDishId || isSubmitting}
-            className="w-full"
-          >
-            Agregar a la orden
-          </Button>
+              {hasPersonalization && (
+                <div className="rounded-md border p-3 space-y-2 max-h-64 overflow-y-auto">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Personalización
+                  </p>
+
+                  {includedIngredients.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground">Quitar</p>
+                      {includedIngredients.map((di) => (
+                        <label
+                          key={di.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={isIngredientChecked(di)}
+                            onCheckedChange={() => toggleIngredient(di)}
+                            disabled={isSubmitting}
+                          />
+                          <span>{di.ingredient.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {optionalIngredients.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground">Opcionales</p>
+                      {optionalIngredients.map((di) => (
+                        <label
+                          key={di.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={isIngredientChecked(di)}
+                            onCheckedChange={() => toggleIngredient(di)}
+                            disabled={isSubmitting}
+                          />
+                          <span>{di.ingredient.name}</span>
+                          <span className="text-muted-foreground text-xs">+$0</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {extraIngredients.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground">Extras</p>
+                      {extraIngredients.map((di) => (
+                        <label
+                          key={di.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={isIngredientChecked(di)}
+                            onCheckedChange={() => toggleIngredient(di)}
+                            disabled={isSubmitting}
+                          />
+                          <span>{di.ingredient.name}</span>
+                          {di.extraCost != null && di.extraCost > 0 && (
+                            <Badge variant="secondary" className="text-xs py-0">
+                              +{formatCurrency(di.extraCost)}
+                            </Badge>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Cantidad</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={builderQtyStr}
+                    onChange={(e) => setBuilderQtyStr(e.target.value)}
+                    onBlur={() => setBuilderQtyStr(String(builderQty))}
+                    disabled={isSubmitting}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="flex-[2]">
+                  <label className="text-xs text-muted-foreground mb-1 block">Notas (opcional)</label>
+                  <Input
+                    type="text"
+                    value={builderNotes}
+                    onChange={(e) => setBuilderNotes(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Sin cebolla, etc."
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddItem}
+                disabled={!selectedDishId || isSubmitting}
+                className="w-full"
+              >
+                Agregar a la orden
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="combos">
+              <ComboPicker onAdd={handleComboAdd} disabled={isSubmitting} />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -307,9 +335,59 @@ export function CreateOrderForm() {
             ) : (
               <div className="space-y-2 overflow-y-auto max-h-64">
                 {fields.map((field, index) => {
-                  const dish = dishCache.current.get(field.dishId)
                   const item = watchedItems[index]
-                  const extrasCost = (item?.extras ?? []).reduce((acc, e) => {
+
+                  if (item?.kind === ORDER_ITEM_KIND.COMBO) {
+                    const name = comboNameCache.current.get(item.comboId) ?? item.comboId
+                    const unitPrice = comboPriceCache.current.get(item.comboId) ?? 0
+                    return (
+                      <div key={field.id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0">Combo</Badge>
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate font-medium">{name}</p>
+                            {item.notes && (
+                              <p className="text-xs text-muted-foreground truncate">{item.notes}</p>
+                            )}
+                          </div>
+                          <span className="text-muted-foreground shrink-0">×{item.quantity}</span>
+                          <span className="shrink-0 text-right w-20">
+                            {formatCurrency(unitPrice * item.quantity)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => remove(index)}
+                            disabled={isSubmitting}
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
+                        <ul className="ml-2 mt-0.5 text-xs text-muted-foreground space-y-0.5">
+                          {item.selections.map((s, i) => {
+                            const label = comboSelectionLabelCache.current.get(
+                              `${item.comboId}:${s.comboSlotId}:${s.dishId}`,
+                            )
+                            return (
+                              <li key={i}>
+                                {label?.slotName ?? s.comboSlotId}: {label?.dishName ?? s.dishId}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    )
+                  }
+
+                  // DISH item
+                  const dish = item?.kind === ORDER_ITEM_KIND.DISH
+                    ? dishCache.current.get(item.dishId)
+                    : undefined
+                  const dishExtras = item?.kind === ORDER_ITEM_KIND.DISH ? (item.extras ?? []) : []
+                  const dishExclusions = item?.kind === ORDER_ITEM_KIND.DISH ? (item.exclusions ?? []) : []
+                  const extrasCost = dishExtras.reduce((acc: number, e: { dishIngredientId: string; quantity: number }) => {
                     const meta = ingredientLabelCache.current.get(e.dishIngredientId)
                     return acc + (meta?.extraCost ?? 0) * e.quantity
                   }, 0)
@@ -318,7 +396,11 @@ export function CreateOrderForm() {
                     <div key={field.id} className="text-sm">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium">{dish?.name ?? field.dishId}</p>
+                          <p className="truncate font-medium">
+                            {item?.kind === ORDER_ITEM_KIND.DISH
+                              ? (dish?.name ?? item.dishId)
+                              : field.id}
+                          </p>
                           {item?.notes && (
                             <p className="text-xs text-muted-foreground truncate">{item.notes}</p>
                           )}
@@ -338,10 +420,9 @@ export function CreateOrderForm() {
                           <Trash2 size={13} />
                         </Button>
                       </div>
-                      {/* Extras sub-lines */}
-                      {item?.extras && item.extras.length > 0 && (
+                      {dishExtras.length > 0 && (
                         <ul className="ml-2 mt-0.5 text-xs text-muted-foreground space-y-0.5">
-                          {item.extras.map((e, i) => {
+                          {dishExtras.map((e: { dishIngredientId: string; quantity: number }, i: number) => {
                             const meta = ingredientLabelCache.current.get(e.dishIngredientId)
                             const cost = (meta?.extraCost ?? 0) * e.quantity
                             return (
@@ -354,10 +435,9 @@ export function CreateOrderForm() {
                           })}
                         </ul>
                       )}
-                      {/* Exclusions sub-lines */}
-                      {item?.exclusions && item.exclusions.length > 0 && (
+                      {dishExclusions.length > 0 && (
                         <ul className="ml-2 mt-0.5 text-xs text-muted-foreground space-y-0.5">
-                          {item.exclusions.map((x, i) => {
+                          {dishExclusions.map((x: { dishIngredientId: string }, i: number) => {
                             const meta = ingredientLabelCache.current.get(x.dishIngredientId)
                             return (
                               <li key={i}>

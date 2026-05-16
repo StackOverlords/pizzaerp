@@ -147,7 +147,7 @@ describe('POST /api/v1/orders', () => {
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
       payload: {
-        items: [{ dishId, quantity: 2 }],
+        items: [{ kind: 'DISH', dishId, quantity: 2 }],
         notes: 'sin cebolla',
       },
     })
@@ -173,7 +173,7 @@ describe('POST /api/v1/orders', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     expect(res.statusCode).toBe(201)
     expect(res.json().orderNumber).toBe(2)
@@ -194,7 +194,7 @@ describe('POST /api/v1/orders', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 0 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 0 }] },
     })
     expect(res.statusCode).toBe(400)
   })
@@ -204,7 +204,7 @@ describe('POST /api/v1/orders', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId: 'non-existent', quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId: 'non-existent', quantity: 1 }] },
     })
     expect(res.statusCode).toBe(400)
   })
@@ -213,7 +213,7 @@ describe('POST /api/v1/orders', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/v1/orders',
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     expect(res.statusCode).toBe(401)
   })
@@ -229,7 +229,7 @@ describe('GET /api/v1/orders/:id', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 3 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 3 }] },
     })
     orderId = res.json<{ id: string }>().id
   })
@@ -268,7 +268,7 @@ describe('PATCH /api/v1/orders/:id/pay', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     cashOrderId = r1.json<{ id: string }>().id
 
@@ -276,7 +276,7 @@ describe('PATCH /api/v1/orders/:id/pay', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 2 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 2 }] },
     })
     qrOrderId = r2.json<{ id: string }>().id
   })
@@ -328,7 +328,7 @@ describe('PATCH /api/v1/orders/:id/pay', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     const id = newOrder.json<{ id: string }>().id
 
@@ -382,7 +382,7 @@ describe('PATCH /api/v1/orders/:id/cancel', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     pendingOrderId = res.json<{ id: string }>().id
   })
@@ -416,7 +416,7 @@ describe('PATCH /api/v1/orders/:id/cancel', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     const id = newOrder.json<{ id: string }>().id
 
@@ -441,7 +441,7 @@ describe('PATCH /api/v1/orders/:id/cancel', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     const id = newOrder.json<{ id: string }>().id
 
@@ -485,7 +485,7 @@ describe('PATCH /api/v1/orders/:id/discount', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 2 }] },  // total = 110
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 2 }] },  // total = 110
     })
     discountOrderId = res.json<{ id: string }>().id
   })
@@ -512,7 +512,7 @@ describe('PATCH /api/v1/orders/:id/discount', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 2 }] },  // total = 110
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 2 }] },  // total = 110
     })
     const id = newOrder.json<{ id: string }>().id
 
@@ -536,7 +536,7 @@ describe('PATCH /api/v1/orders/:id/discount', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
-      payload: { items: [{ dishId, quantity: 1 }] },  // total = 55
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },  // total = 55
     })
     const id = newOrder.json<{ id: string }>().id
 
@@ -976,6 +976,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           exclusions: [{ dishIngredientId: includedDishIngId }],
@@ -1010,6 +1011,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           extras: [{ dishIngredientId: extraDishIngId, quantity: 2 }],
@@ -1045,6 +1047,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           extras: [{ dishIngredientId: extraDishIngId, quantity: 1 }],
@@ -1084,6 +1087,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           exclusions: [{ dishIngredientId: extraDishIngId }],
@@ -1102,6 +1106,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           extras: [{ dishIngredientId: includedDishIngId, quantity: 1 }],
@@ -1120,6 +1125,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           extras: [{ dishIngredientId: otherDishIngId, quantity: 1 }],
@@ -1138,6 +1144,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       headers: authHeader(cajeroToken),
       payload: {
         items: [{
+          kind: 'DISH',
           dishId: dishWithIngsId,
           quantity: 1,
           extras: [{ dishIngredientId: optionalDishIngId, quantity: 1 }],
@@ -1170,7 +1177,7 @@ describe('POST /api/v1/orders — extras y exclusiones', () => {
       url: '/api/v1/orders',
       headers: authHeader(cajeroToken),
       payload: {
-        items: [{ dishId: dishWithIngsId, quantity: 1 }],
+        items: [{ kind: 'DISH', dishId: dishWithIngsId, quantity: 1 }],
       },
     })
 
@@ -1205,7 +1212,7 @@ describe('POST /api/v1/orders — ADMIN branch override', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: { Authorization: `Bearer ${adminNoBranchToken}` },
-      payload: { items: [{ dishId, quantity: 1 }], branchId },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }], branchId },
     })
     // Branch resolution succeeded — may fail for another reason (no open shift for admin user)
     // but must NOT be 400 'Debe seleccionar una sucursal'
@@ -1219,7 +1226,7 @@ describe('POST /api/v1/orders — ADMIN branch override', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: { Authorization: `Bearer ${adminNoBranchToken}` },
-      payload: { items: [{ dishId, quantity: 1 }] },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }] },
     })
     expect(res.statusCode).toBe(400)
     expect(res.json().message).toBe('Debe seleccionar una sucursal')
@@ -1231,7 +1238,7 @@ describe('POST /api/v1/orders — ADMIN branch override', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: { Authorization: `Bearer ${cajeroToken}` },
-      payload: { items: [{ dishId, quantity: 1 }], branchId: otherBranchId },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }], branchId: otherBranchId },
     })
     expect(res.statusCode).toBe(201)
     expect(res.json().branchId).toBe(branchId) // JWT branch, not body
@@ -1243,11 +1250,367 @@ describe('POST /api/v1/orders — ADMIN branch override', () => {
       method: 'POST',
       url: '/api/v1/orders',
       headers: { Authorization: `Bearer ${adminToken}` },
-      payload: { items: [{ dishId, quantity: 1 }], branchId: otherBranchId },
+      payload: { items: [{ kind: 'DISH', dishId, quantity: 1 }], branchId: otherBranchId },
     })
     // JWT branch was used (admin with branchId in JWT) — may fail for other reason but not 'no branch'
     if (res.statusCode === 400) {
       expect(res.json().message).not.toBe('Debe seleccionar una sucursal')
     }
+  })
+})
+
+// ─── POST /orders — combos ────────────────────────────────────────────────────
+
+describe('POST /api/v1/orders — combos', () => {
+  let comboId: string
+  let slot1Id: string   // required — accepts hamburguesa, pizza
+  let slot2Id: string   // required — accepts refresco
+  let slot3Id: string   // optional — accepts hamburguesa
+  // dishId that is valid for slot1 (Hamburguesa)
+  let slot1ValidDishId: string
+  // dishId that is valid for slot2 (Refresco)
+  let slot2ValidDishId: string
+  let otherComboSlotId: string
+  let inactiveComboId: string
+  let windowComboId: string
+  let windowComboSlotId: string
+
+  beforeAll(async () => {
+    // Crear platillos para las opciones de los slots
+    const [d1, d2, d3] = await Promise.all([
+      prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO "${TEST.tenantSchema}".dishes (name, sale_price, active)
+         VALUES ('Hamburguesa', 80.00, true) RETURNING id`,
+      ),
+      prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO "${TEST.tenantSchema}".dishes (name, sale_price, active)
+         VALUES ('Pizza Combo', 90.00, true) RETURNING id`,
+      ),
+      prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO "${TEST.tenantSchema}".dishes (name, sale_price, active)
+         VALUES ('Refresco', 20.00, true) RETURNING id`,
+      ),
+    ])
+    // d1=Hamburguesa (valid for slot1), d2=Pizza Combo (valid for slot1), d3=Refresco (valid for slot2)
+    slot1ValidDishId = d1[0].id
+    slot2ValidDishId = d3[0].id
+
+    // Crear combo activo con 2 slots requeridos + 1 opcional
+    const comboRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combos (name, description, sale_price)
+       VALUES ('Combo Familiar', 'El mejor combo', 120.00) RETURNING id`,
+    )
+    comboId = comboRows[0].id
+
+    // Slot 1 — required
+    const s1 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slots (combo_id, name, required, order_index)
+       VALUES ($1, 'Principal', true, 0) RETURNING id`,
+      comboId,
+    )
+    slot1Id = s1[0].id
+
+    // Slot 2 — required
+    const s2 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slots (combo_id, name, required, order_index)
+       VALUES ($1, 'Bebida', true, 1) RETURNING id`,
+      comboId,
+    )
+    slot2Id = s2[0].id
+
+    // Slot 3 — optional
+    const s3 = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slots (combo_id, name, required, order_index)
+       VALUES ($1, 'Postre', false, 2) RETURNING id`,
+      comboId,
+    )
+    slot3Id = s3[0].id
+
+    // Opciones: slot1 → [Hamburguesa, Pizza Combo], slot2 → [Refresco], slot3 → [Hamburguesa]
+    await prisma.$queryRawUnsafe(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slot_options (slot_id, dish_id)
+       VALUES ($1, $2), ($1, $3)`,
+      slot1Id, d1[0].id, d2[0].id,
+    )
+    await prisma.$queryRawUnsafe(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slot_options (slot_id, dish_id)
+       VALUES ($1, $2)`,
+      slot2Id, d3[0].id,
+    )
+    await prisma.$queryRawUnsafe(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slot_options (slot_id, dish_id)
+       VALUES ($1, $2)`,
+      slot3Id, d1[0].id,
+    )
+
+    // Combo inactivo para test de error
+    const inactiveRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combos (name, sale_price, active)
+       VALUES ('Combo Inactivo', 50.00, false) RETURNING id`,
+    )
+    inactiveComboId = inactiveRows[0].id
+
+    // Slot de otro combo para test de slot ownership
+    const otherComboRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combos (name, sale_price)
+       VALUES ('Otro Combo', 60.00) RETURNING id`,
+    )
+    const otherComboId = otherComboRows[0].id
+    const otherSlot = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slots (combo_id, name, required, order_index)
+       VALUES ($1, 'Slot Ajeno', false, 0) RETURNING id`,
+      otherComboId,
+    )
+    otherComboSlotId = otherSlot[0].id
+
+    // Combo con ventana de disponibilidad muy estrecha (00:00:00–00:00:01) — siempre fuera de horario
+    const windowRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combos (name, sale_price, available_from, available_to)
+       VALUES ('Combo Nocturno', 100.00, '00:00:00', '00:00:01') RETURNING id`,
+    )
+    windowComboId = windowRows[0].id
+    const ws = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slots (combo_id, name, required, order_index)
+       VALUES ($1, 'Principal', true, 0) RETURNING id`,
+      windowComboId,
+    )
+    windowComboSlotId = ws[0].id
+    await prisma.$queryRawUnsafe(
+      `INSERT INTO "${TEST.tenantSchema}".combo_slot_options (slot_id, dish_id)
+       VALUES ($1, $2)`,
+      windowComboSlotId, slot1ValidDishId,
+    )
+  })
+
+  it('CO-01 — DISH con kind explícito sigue funcionando (backward compat)', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{ kind: 'DISH', dishId, quantity: 1 }],
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().items[0].kind).toBe('DISH')
+    expect(res.json().items[0].selections).toHaveLength(0)
+  })
+
+  it('CO-02 — orden mixta (1 DISH + 1 COMBO) → 201, items[1].kind=COMBO, selections.length=2', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [
+          { kind: 'DISH', dishId, quantity: 1 },
+          {
+            kind: 'COMBO',
+            comboId,
+            quantity: 1,
+            selections: [
+              { comboSlotId: slot1Id, dishId: slot1ValidDishId },
+              { comboSlotId: slot2Id, dishId: slot2ValidDishId },
+            ],
+          },
+        ],
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.items).toHaveLength(2)
+    const comboItem = body.items.find((i: { kind: string }) => i.kind === 'COMBO')
+    expect(comboItem).toBeDefined()
+    expect(comboItem.comboName).toBe('Combo Familiar')
+    expect(comboItem.selections).toHaveLength(2)
+  })
+
+  it('CO-03 — COMBO con quantity=2 → unitPrice=120, subtotal=240', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId,
+          quantity: 2,
+          selections: [
+            { comboSlotId: slot1Id, dishId: slot1ValidDishId },
+            { comboSlotId: slot2Id, dishId: slot2ValidDishId },
+          ],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    const comboItem = body.items[0]
+    expect(comboItem.unitPrice).toBe(120)
+    expect(comboItem.subtotal).toBe(240)
+    expect(body.total).toBe(240)
+  })
+
+  it('CO-04 — GET /orders/:id retorna items[].selections con slotName y dishName', async () => {
+    const createRes = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId,
+          quantity: 1,
+          selections: [
+            { comboSlotId: slot1Id, dishId: slot1ValidDishId },
+            { comboSlotId: slot2Id, dishId: slot2ValidDishId },
+          ],
+        }],
+      },
+    })
+    expect(createRes.statusCode).toBe(201)
+    const orderId = createRes.json<{ id: string }>().id
+
+    const getRes = await server.inject({
+      method: 'GET',
+      url: `/api/v1/orders/${orderId}`,
+      headers: authHeader(cajeroToken),
+    })
+    expect(getRes.statusCode).toBe(200)
+    const body = getRes.json()
+    const comboItem = body.items[0]
+    expect(comboItem.kind).toBe('COMBO')
+    expect(comboItem.selections).toHaveLength(2)
+    expect(comboItem.selections[0].slotName).toBeDefined()
+    expect(comboItem.selections[0].dishName).toBeDefined()
+  })
+
+  it('CO-05 — ítem sin kind → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{ dishId, quantity: 1 }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('CO-06 — comboId inexistente → 404', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId: 'non-existent-combo-id',
+          quantity: 1,
+          selections: [{ comboSlotId: slot1Id, dishId: slot1ValidDishId }],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('CO-07 — combo inactivo → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId: inactiveComboId,
+          quantity: 1,
+          selections: [],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/no está disponible|inactivo/i)
+  })
+
+  it('CO-08 — slotId de otro combo → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId,
+          quantity: 1,
+          selections: [
+            { comboSlotId: otherComboSlotId, dishId: slot1ValidDishId },
+            { comboSlotId: slot2Id, dishId: slot2ValidDishId },
+          ],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/no pertenece al combo/i)
+  })
+
+  it('CO-09 — slot requerido no cubierto → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId,
+          quantity: 1,
+          // solo cubre slot1, falta slot2 (requerido)
+          selections: [
+            { comboSlotId: slot1Id, dishId: slot1ValidDishId },
+          ],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/requerido|slot/i)
+  })
+
+  it('CO-10 — dishId no es opción válida del slot → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId,
+          quantity: 1,
+          // slot1 solo acepta Hamburguesa y Pizza Combo; Refresco (slot2ValidDishId) no es válido aquí
+          selections: [
+            { comboSlotId: slot1Id, dishId: slot2ValidDishId },
+            { comboSlotId: slot2Id, dishId: slot2ValidDishId },
+          ],
+        }],
+      },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/válida|opción/i)
+  })
+
+  it('CO-11 — combo fuera de ventana de disponibilidad → 400', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/v1/orders',
+      headers: authHeader(cajeroToken),
+      payload: {
+        items: [{
+          kind: 'COMBO',
+          comboId: windowComboId,
+          quantity: 1,
+          selections: [{ comboSlotId: windowComboSlotId, dishId: slot1ValidDishId }],
+        }],
+      },
+    })
+    // windowComboId tiene ventana 00:00:00–00:00:01 — prácticamente siempre fuera de horario
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(/disponible/i)
   })
 })

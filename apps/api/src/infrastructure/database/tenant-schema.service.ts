@@ -173,6 +173,15 @@ const TENANT_DDL_STATEMENTS = (s: string): string[] => [
     ingredient_name    TEXT NOT NULL
   )`,
 
+  // ─── COMBOS EN ÓRDENES ────────────────────────────────────────────────────
+
+  `ALTER TABLE IF EXISTS "${s}".order_items ADD COLUMN IF NOT EXISTS combo_id TEXT REFERENCES "${s}".combos(id) ON DELETE SET NULL`,
+  `ALTER TABLE IF EXISTS "${s}".order_items ADD COLUMN IF NOT EXISTS item_kind TEXT NOT NULL DEFAULT 'DISH'`,
+  `ALTER TABLE IF EXISTS "${s}".order_items DROP CONSTRAINT IF EXISTS order_items_kind_xor_check`,
+  `ALTER TABLE IF EXISTS "${s}".order_items ADD CONSTRAINT order_items_kind_xor_check CHECK ((item_kind='DISH' AND dish_id IS NOT NULL AND combo_id IS NULL) OR (item_kind='COMBO' AND combo_id IS NOT NULL AND dish_id IS NULL))`,
+  `CREATE TABLE IF NOT EXISTS "${s}".order_item_combo_selections (id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text, order_item_id TEXT NOT NULL REFERENCES "${s}".order_items(id) ON DELETE CASCADE, combo_slot_id TEXT REFERENCES "${s}".combo_slots(id) ON DELETE SET NULL, slot_name TEXT NOT NULL, dish_id TEXT REFERENCES "${s}".dishes(id) ON DELETE SET NULL, dish_name TEXT NOT NULL, order_index INT NOT NULL DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS idx_oics_item ON "${s}".order_item_combo_selections (order_item_id)`,
+
   `CREATE TABLE IF NOT EXISTS "${s}".payments (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_id      TEXT NOT NULL REFERENCES "${s}".orders(id),

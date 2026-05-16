@@ -58,7 +58,7 @@ export const routes: RouteConfig[] = [
     path: '/orders',
     label: 'Órdenes',
     icon: ShoppingCart,
-    element: <Placeholder label="Órdenes" />,
+    element: <Navigate to="/orders/list" replace />,
     order: 1,
     children: [
       {
@@ -87,7 +87,7 @@ export const routes: RouteConfig[] = [
     path: '/menu',
     label: 'Menú',
     icon: Pizza,
-    element: <Placeholder label="Menú" />,
+    element: <Navigate to="/menu/products" replace />,
     order: 2,
     children: [
       {
